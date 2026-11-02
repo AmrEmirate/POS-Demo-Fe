@@ -42,6 +42,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   searchTerm,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false);
 
   // Filter menus based on search & category
   const filteredMenus = menus.filter((item) => {
@@ -68,8 +69,8 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
 
   return (
     <div className="flex-1 flex overflow-hidden bg-[#f8f9ff]">
-      {/* COLUMN 1: LEFT CATEGORY & HARDWARE RAIL (w-56 md:w-60) */}
-      <aside className="w-56 md:w-60 bg-[#f2f3f9] border-r border-slate-200 flex flex-col justify-between p-3 shrink-0">
+      {/* COLUMN 1: LEFT CATEGORY & HARDWARE RAIL (Hidden on mobile/tablet, available via top filter chips) */}
+      <aside className="hidden lg:flex w-56 lg:w-60 bg-[#f2f3f9] border-r border-slate-200 flex-col justify-between p-3 shrink-0">
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <span className="font-display text-[11px] font-bold text-slate-500 tracking-wider uppercase">
@@ -281,10 +282,35 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Mobile Floating Cart Action Bar */}
+        {cart.length > 0 && !isMobileCartOpen && (
+          <div className="md:hidden p-3 bg-white border-t border-slate-200 shadow-2xl flex items-center justify-between shrink-0">
+            <div>
+              <span className="text-[10px] text-slate-500 font-bold uppercase block">
+                {cart.reduce((a, b) => a + b.quantity, 0)} Item Dipilih
+              </span>
+              <span className="text-sm font-bold text-[#002045] font-display">
+                {formatRupiah(grandTotal)}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsMobileCartOpen(true)}
+              className="px-4 py-2 bg-[#002045] hover:bg-[#0284c7] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+            >
+              <span className="material-symbols-outlined text-base">shopping_cart</span>
+              <span>Buka Keranjang ({cart.length}) &rarr;</span>
+            </button>
+          </div>
+        )}
       </main>
 
-      {/* COLUMN 3: RIGHT ORDER CART & CHECKOUT RAIL (w-80 md:w-96) */}
-      <aside className="w-80 md:w-96 bg-white border-l border-slate-200 flex flex-col justify-between shrink-0 shadow-lg">
+      {/* COLUMN 3: RIGHT ORDER CART & CHECKOUT RAIL */}
+      <aside
+        className={`fixed inset-0 z-40 md:static md:z-auto w-full md:w-80 lg:w-96 bg-white border-l border-slate-200 flex flex-col justify-between shrink-0 shadow-lg transition-transform duration-200 ${
+          isMobileCartOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'
+        }`}
+      >
         {/* Cart Header & Order Meta */}
         <div className="p-4 border-b border-slate-200 bg-slate-50 space-y-3">
           <div className="flex items-center justify-between">
@@ -292,14 +318,23 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
               <span className="material-symbols-outlined text-[#002045] text-xl">shopping_cart</span>
               <h2 className="font-display font-bold text-slate-900 text-base">Pesanan Kasir</h2>
             </div>
-            {cart.length > 0 && (
+            <div className="flex items-center gap-2">
+              {cart.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold"
+                >
+                  Kosongkan
+                </button>
+              )}
               <button
-                onClick={clearCart}
-                className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold"
+                onClick={() => setIsMobileCartOpen(false)}
+                className="md:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-200"
+                title="Tutup Keranjang"
               >
-                Kosongkan
+                <span className="material-symbols-outlined text-lg">close</span>
               </button>
-            )}
+            </div>
           </div>
 
           {/* Dine-In / Takeaway Toggle */}

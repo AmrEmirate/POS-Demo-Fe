@@ -12,8 +12,10 @@ import { ExecutiveDashboard } from './components/ExecutiveDashboard';
 import { QrisModal } from './components/QrisModal';
 import { CashModal } from './components/CashModal';
 import { ReceiptModal } from './components/ReceiptModal';
+import { LoginPage, UserAccount } from './components/LoginPage';
 
 export function App() {
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [activeTab, setActiveTab] = useState<'pos' | 'dashboard'>('pos');
   const [menus, setMenus] = useState<MenuItem[]>(INITIAL_MENUS);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -163,6 +165,21 @@ export function App() {
 
   const financials = calculateFinancials(orders);
 
+  if (!currentUser) {
+    return (
+      <LoginPage
+        onLogin={(user) => {
+          setCurrentUser(user);
+          if (user.role === 'OWNER') {
+            setActiveTab('dashboard');
+          } else {
+            setActiveTab('pos');
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f8f9ff]">
       {/* Top Navigation */}
@@ -171,6 +188,8 @@ export function App() {
         setActiveTab={setActiveTab}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        currentUser={currentUser}
+        onLogout={() => setCurrentUser(null)}
       />
 
       {/* Main View Area */}

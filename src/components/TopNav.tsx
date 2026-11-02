@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { UserAccount } from './LoginPage';
 
 interface TopNavProps {
   activeTab: 'pos' | 'dashboard';
   setActiveTab: (tab: 'pos' | 'dashboard') => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  currentUser?: UserAccount | null;
+  onLogout?: () => void;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -12,6 +15,8 @@ export const TopNav: React.FC<TopNavProps> = ({
   setActiveTab,
   searchTerm,
   setSearchTerm,
+  currentUser,
+  onLogout,
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
 
@@ -64,7 +69,10 @@ export const TopNav: React.FC<TopNavProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-slate-400 text-sm">badge</span>
-            <span>Kasir: <strong className="text-slate-900">Budi Santoso</strong></span>
+            <span>
+              {currentUser?.role === 'OWNER' ? 'Owner: ' : currentUser?.role === 'MANAGER' ? 'Manager: ' : 'Kasir: '}
+              <strong className="text-slate-900">{currentUser?.name || 'Budi Santoso'}</strong>
+            </span>
           </div>
         </div>
 
@@ -132,9 +140,23 @@ export const TopNav: React.FC<TopNavProps> = ({
           <span className="text-[11px] font-semibold text-slate-700">Online (0.12s)</span>
         </div>
 
-        {/* Avatar */}
-        <div className="w-8 h-8 rounded-full bg-[#002045] text-white flex items-center justify-center font-display font-bold text-xs shadow-xs" title="Budi Santoso (Kasir Shift 1)">
-          BS
+        {/* Avatar & Logout */}
+        <div className="flex items-center gap-2">
+          <div
+            className="w-8 h-8 rounded-full bg-[#002045] text-white flex items-center justify-center font-display font-bold text-xs shadow-xs"
+            title={`${currentUser?.name || 'Kasir'} (${currentUser?.role || 'KASIR'})`}
+          >
+            {currentUser?.avatarInitials || 'BS'}
+          </div>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              title="Keluar / Ganti Akun"
+            >
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
