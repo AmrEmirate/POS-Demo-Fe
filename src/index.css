@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #00091b;
+  --color-primary-container: #002045;
+  --color-secondary: #006398;
+  --color-secondary-cyan: #0284c7;
+  --color-tertiary-emerald: #10b981;
+  --color-surface-bg: #f8f9ff;
+  --color-card-bg: #ffffff;
+  --color-border: #e2e8f0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: var(--color-surface-bg);
+  color: var(--color-primary);
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+}
+
+.font-display {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.font-body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Material Symbols sizing */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Custom Thin Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Tactile button active states */
+.tactile-btn:active {
+  transform: translateY(1px);
+}

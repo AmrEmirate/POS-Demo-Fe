@@ -1,0 +1,282 @@
+import { MenuItem, Order, ShiftInfo, FinancialMetric } from '../types';
+
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api-pos.vimtk.cloud/api/v1';
+
+// Initial pre-loaded menu items designed with Google Stitch MCP & Brand PT Pro Teknologi
+export const INITIAL_MENUS: MenuItem[] = [
+  {
+    id: 'm1',
+    code: 'DIM-01',
+    name: 'Siomay Dimsum Ayam Spesial',
+    category: 'kukus',
+    price: 28000,
+    costPrice: 12000,
+    stock: 45,
+    description: '4 pcs olahan daging ayam segar & jamur shiitake dibalut kulit tipis lembut dengan saus sambal racikan khas.',
+    image: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: true,
+  },
+  {
+    id: 'm2',
+    code: 'DIM-02',
+    name: 'Hakau Udang Kristal Transparan',
+    category: 'kukus',
+    price: 32000,
+    costPrice: 15000,
+    stock: 28,
+    description: 'Udang utuh segar pilihan terbungkus kulit tepung transparan lentur nan kenyal, dikukus hangat segar setiap pesanan.',
+    image: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: false,
+  },
+  {
+    id: 'm3',
+    code: 'DIM-03',
+    name: 'Lumpia Kulit Tahu Goreng Emas',
+    category: 'goreng',
+    price: 26000,
+    costPrice: 11000,
+    stock: 20,
+    description: 'Kulit kembang tahu renyah keemasan berpadu cincangan udang gurih berair, disajikan hangat dengan saus asam manis.',
+    image: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: true,
+  },
+  {
+    id: 'm4',
+    code: 'DIM-04',
+    name: 'Pao Telur Asin Lava Meleleh',
+    category: 'kukus',
+    price: 24000,
+    costPrice: 9000,
+    stock: 30,
+    description: 'Bakpao lembut selembut awan dengan filling custard kuning telur asin manis gurih yang meleleh saat dibelah.',
+    image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: false,
+  },
+  {
+    id: 'm5',
+    code: 'DIM-05',
+    name: 'Dimsum Mozzarella Mentai Melt',
+    category: 'mentai',
+    price: 30000,
+    costPrice: 13000,
+    stock: 35,
+    description: 'Kombinasi dimsum ayam panggang dengan saus mentai gurih beraroma asap dan lelehan keju mozzarella premium.',
+    image: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: true,
+  },
+  {
+    id: 'm6',
+    code: 'MC-01',
+    name: 'Nasi Goreng Spesial Wagyu',
+    category: 'goreng',
+    price: 38000,
+    costPrice: 18000,
+    stock: 25,
+    description: 'Nasi goreng harum wangi wok dengan potongan daging wagyu lembut, telur ceplok setengah matang, & acar segar.',
+    image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: true,
+  },
+  {
+    id: 'm7',
+    code: 'MC-02',
+    name: 'Mie Bebek Panggang Madu HK',
+    category: 'kukus',
+    price: 45000,
+    costPrice: 20000,
+    stock: 18,
+    description: 'Mie telur tipis kenyal khas Hong Kong disiram kuah kaldu harum dan topping irisan bebek panggang madu gurih manis.',
+    image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: false,
+  },
+  {
+    id: 'm8',
+    code: 'BEV-01',
+    name: 'Es Kopi Susu Gula Aren Murni',
+    category: 'minuman',
+    price: 22000,
+    costPrice: 7000,
+    stock: 60,
+    description: 'Double shot espresso blend pilihan dipadukan dengan gula aren organik murni dan fresh milk dingin segar berkrim.',
+    image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: true,
+  },
+  {
+    id: 'm9',
+    code: 'BEV-02',
+    name: 'Ceremonial Uji Matcha Latte',
+    category: 'minuman',
+    price: 25000,
+    costPrice: 8000,
+    stock: 40,
+    description: 'Pure ceremonial grade matcha dari Kyoto, Jepang dikocok lembut dengan susu segar dingin berbuih halus.',
+    image: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: false,
+  },
+  {
+    id: 'm10',
+    code: 'BEV-03',
+    name: 'Lychee Iced Tea Supreme',
+    category: 'minuman',
+    price: 20000,
+    costPrice: 6000,
+    stock: 50,
+    description: 'Seduhan teh melati wangi dingin dengan sirup buah leci dan 2 butir buah leci utuh segar penghilang dahaga.',
+    image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=600&q=80',
+    isAvailable: true,
+    isBestSeller: false,
+  },
+];
+
+export const INITIAL_ORDERS: Order[] = [
+  {
+    id: 'ord-01',
+    invoiceNumber: 'INV-DEMO-001',
+    customerName: 'Ahmad Faisal',
+    tableNumber: 'Meja 01',
+    orderType: 'DINE_IN',
+    items: [
+      { menuId: 'm1', name: 'Siomay Dimsum Ayam Spesial', price: 28000, costPrice: 12000, quantity: 2 },
+      { menuId: 'm8', name: 'Es Kopi Susu Gula Aren Murni', price: 22000, costPrice: 7000, quantity: 2 },
+    ],
+    subtotal: 100000,
+    discount: 0,
+    tax: 10000,
+    total: 110000,
+    hppTotal: 38000,
+    paymentMethod: 'QRIS',
+    cashierName: 'Budi Santoso',
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+  },
+  {
+    id: 'ord-02',
+    invoiceNumber: 'INV-DEMO-002',
+    customerName: 'Dian P. (Gold Member)',
+    tableNumber: 'Meja 08',
+    orderType: 'DINE_IN',
+    items: [
+      { menuId: 'm2', name: 'Hakau Udang Kristal Transparan', price: 32000, costPrice: 15000, quantity: 2 },
+      { menuId: 'm8', name: 'Es Kopi Susu Gula Aren Murni', price: 22000, costPrice: 7000, quantity: 1 },
+    ],
+    subtotal: 86000,
+    discount: 5000,
+    tax: 8100,
+    total: 89100,
+    hppTotal: 37000,
+    paymentMethod: 'QRIS',
+    cashierName: 'Budi Santoso',
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  {
+    id: 'ord-03',
+    invoiceNumber: 'INV-DEMO-003',
+    customerName: 'Siti Rahayu',
+    tableNumber: null,
+    orderType: 'TAKEAWAY',
+    items: [
+      { menuId: 'm1', name: 'Siomay Dimsum Ayam Spesial', price: 28000, costPrice: 12000, quantity: 3 },
+      { menuId: 'm3', name: 'Lumpia Kulit Tahu Goreng Emas', price: 26000, costPrice: 11000, quantity: 2 },
+      { menuId: 'm10', name: 'Lychee Iced Tea Supreme', price: 20000, costPrice: 6000, quantity: 2 },
+    ],
+    subtotal: 176000,
+    discount: 0,
+    tax: 17600,
+    total: 193600,
+    hppTotal: 70000,
+    paymentMethod: 'CASH',
+    cashReceived: 200000,
+    changeAmount: 6400,
+    cashierName: 'Budi Santoso',
+    createdAt: new Date(Date.now() - 3600000 * 1.5).toISOString(),
+  },
+  {
+    id: 'ord-04',
+    invoiceNumber: 'INV-DEMO-004',
+    customerName: 'Reza Pratama',
+    tableNumber: 'Meja 04',
+    orderType: 'DINE_IN',
+    items: [
+      { menuId: 'm6', name: 'Nasi Goreng Spesial Wagyu', price: 38000, costPrice: 18000, quantity: 2 },
+      { menuId: 'm9', name: 'Ceremonial Uji Matcha Latte', price: 25000, costPrice: 8000, quantity: 2 },
+    ],
+    subtotal: 126000,
+    discount: 0,
+    tax: 12600,
+    total: 138600,
+    hppTotal: 52000,
+    paymentMethod: 'CASH',
+    cashReceived: 150000,
+    changeAmount: 11400,
+    cashierName: 'Budi Santoso',
+    createdAt: new Date(Date.now() - 3600000 * 0.8).toISOString(),
+  },
+  {
+    id: 'ord-05',
+    invoiceNumber: 'INV-DEMO-005',
+    customerName: 'Keluarga Wijaya',
+    tableNumber: 'Meja 12',
+    orderType: 'DINE_IN',
+    items: [
+      { menuId: 'm7', name: 'Mie Bebek Panggang Madu HK', price: 45000, costPrice: 20000, quantity: 3 },
+      { menuId: 'm2', name: 'Hakau Udang Kristal Transparan', price: 32000, costPrice: 15000, quantity: 3 },
+      { menuId: 'm8', name: 'Es Kopi Susu Gula Aren Murni', price: 22000, costPrice: 7000, quantity: 3 },
+    ],
+    subtotal: 297000,
+    discount: 15000,
+    tax: 28200,
+    total: 310200,
+    hppTotal: 126000,
+    paymentMethod: 'QRIS',
+    cashierName: 'Budi Santoso',
+    createdAt: new Date(Date.now() - 1800000).toISOString(),
+  },
+];
+
+export const INITIAL_SHIFT: ShiftInfo = {
+  id: 'shift-demo-01',
+  shiftName: 'Shift 1 (Pagi - Reguler)',
+  cashierName: 'Budi Santoso',
+  terminalId: 'POS-01',
+  startTime: '08:00 WIB',
+  startingCash: 500000,
+  cashSales: 332200,
+  qrisSales: 509300,
+  totalSales: 841500,
+  status: 'ACTIVE',
+};
+
+export const calculateFinancials = (orders: Order[]): FinancialMetric => {
+  let totalRevenue = 0;
+  let totalHpp = 0;
+
+  for (const o of orders) {
+    totalRevenue += o.total;
+    totalHpp += o.hppTotal;
+  }
+
+  const grossProfit = totalRevenue - totalHpp;
+  const fixedExpenses = 75000; // Alokasi biaya listrik, sewa, internet per hari
+  const netProfit = grossProfit - fixedExpenses;
+  const profitMarginPct = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+  return {
+    totalRevenue,
+    grossProfit,
+    totalHpp,
+    netProfit,
+    profitMarginPct: Number(profitMarginPct.toFixed(1)),
+    totalOrdersCount: orders.length,
+  };
+};
+
+export const formatRupiah = (num: number): string => {
+  return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+};
