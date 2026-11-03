@@ -34,26 +34,26 @@ export const TopNav: React.FC<TopNavProps> = ({
   }, []);
 
   return (
-    <header className="bg-white border-b border-slate-200 flex justify-between items-center w-full px-4 h-16 z-50 shrink-0 shadow-xs">
+    <header className="bg-white border-b border-slate-200 flex justify-between items-center w-full px-3 sm:px-4 h-14 sm:h-16 z-50 shrink-0 shadow-xs">
       {/* Left: Brand + Branch + Search */}
-      <div className="flex items-center gap-4 flex-1">
+      <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
         {/* Brand Logo & Name */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <img
             src="/logo.png"
             alt="PT Pro Teknologi"
-            className="h-10 w-auto object-contain rounded bg-white p-1 border border-slate-200 shadow-xs"
+            className="h-8 sm:h-10 w-auto object-contain rounded bg-white p-1 border border-slate-200 shadow-xs"
           />
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="font-display font-bold text-slate-900 tracking-tight text-base md:text-lg">
-                Pro POS Enterprise
+              <span className="font-display font-bold text-slate-900 tracking-tight text-sm sm:text-base md:text-lg">
+                Pro POS<span className="hidden sm:inline"> Enterprise</span>
               </span>
-              <span className="px-2 py-0.5 rounded bg-sky-100 text-[#0284c7] font-display text-[11px] font-bold">
+              <span className="hidden xs:inline-block px-1.5 py-0.5 rounded bg-sky-100 text-[#0284c7] font-display text-[10px] font-bold">
                 Showcase
               </span>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium">
+            <span className="hidden sm:block text-[11px] text-slate-500 font-medium leading-none">
               PT Pro Teknologi
             </span>
           </div>
@@ -62,7 +62,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
 
         {/* Branch location & Cashier info */}
-        <div className="hidden lg:flex items-center gap-4 text-xs text-slate-600">
+        <div className="hidden xl:flex items-center gap-4 text-xs text-slate-600">
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[#0284c7] text-sm">storefront</span>
             <span className="font-semibold text-slate-800">Mall Grand Indonesia Branch</span>
@@ -76,9 +76,9 @@ export const TopNav: React.FC<TopNavProps> = ({
           </div>
         </div>
 
-        {/* Search Bar (Only shown in POS view) */}
+        {/* Search Bar Desktop (POS view only) - Mobile has dedicated search bar in catalog */}
         {activeTab === 'pos' && (
-          <div className="relative flex-1 max-w-xs md:max-w-sm ml-2">
+          <div className="relative hidden md:block flex-1 max-w-xs ml-2">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <span className="material-symbols-outlined text-slate-400 text-base">search</span>
             </div>
@@ -99,51 +99,53 @@ export const TopNav: React.FC<TopNavProps> = ({
       </div>
 
       {/* Right: View Switcher, Telemetry, Avatar */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Navigation Tabs Switcher */}
         <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
           <button
             onClick={() => setActiveTab('pos')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+            title="Terminal Kasir"
+            className={`px-2.5 py-1.5 sm:px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 min-h-[36px] ${
               activeTab === 'pos'
                 ? 'bg-[#002045] text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <span className="material-symbols-outlined text-base">point_of_sale</span>
-            <span className="font-display">Terminal Kasir</span>
+            <span className="material-symbols-outlined text-base sm:text-lg">point_of_sale</span>
+            <span className="font-display hidden sm:inline">Terminal Kasir</span>
           </button>
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+            title="Owner Dashboard"
+            className={`px-2.5 py-1.5 sm:px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 min-h-[36px] ${
               activeTab === 'dashboard'
                 ? 'bg-[#0284c7] text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <span className="material-symbols-outlined text-base">monitoring</span>
-            <span className="font-display">Owner Dashboard</span>
+            <span className="material-symbols-outlined text-base sm:text-lg">monitoring</span>
+            <span className="font-display hidden sm:inline">Owner Dashboard</span>
           </button>
         </div>
 
-        {/* Live Clock */}
-        <div className="hidden sm:block font-display font-bold text-xs text-slate-800 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+        {/* Live Clock (tablet and up) */}
+        <div className="hidden md:block font-display font-bold text-xs text-slate-800 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
           {timeStr || '12:00:00 WIB'}
         </div>
 
-        {/* Telemetry Indicator */}
-        <div className="hidden md:flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
+        {/* Telemetry Indicator (large screens) */}
+        <div className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          <span className="text-[11px] font-semibold text-slate-700">Online (0.12s)</span>
+          <span className="text-[11px] font-semibold text-slate-700">Online</span>
         </div>
 
         {/* Avatar & Logout */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <div
-            className="w-8 h-8 rounded-full bg-[#002045] text-white flex items-center justify-center font-display font-bold text-xs shadow-xs"
+            className="w-8 h-8 rounded-full bg-[#002045] text-white flex items-center justify-center font-display font-bold text-xs shadow-xs shrink-0"
             title={`${currentUser?.name || 'Kasir'} (${currentUser?.role || 'KASIR'})`}
           >
             {currentUser?.avatarInitials || 'BS'}
@@ -151,10 +153,10 @@ export const TopNav: React.FC<TopNavProps> = ({
           {onLogout && (
             <button
               onClick={onLogout}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0"
               title="Keluar / Ganti Akun"
             >
-              <span className="material-symbols-outlined text-[18px]">logout</span>
+              <span className="material-symbols-outlined text-[20px]">logout</span>
             </button>
           )}
         </div>

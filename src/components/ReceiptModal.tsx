@@ -11,24 +11,24 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
   if (!order) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm w-full max-h-[92vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
         {/* Actions bar */}
-        <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
+        <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between shrink-0">
           <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
             <span className="material-symbols-outlined text-emerald-600 text-sm">check_circle</span>
             Transaksi Berhasil
           </span>
           <button
             onClick={onClose}
-            className="w-6 h-6 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs"
+            className="w-7 h-7 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs transition"
           >
             ✕
           </button>
         </div>
 
         {/* Paper Receipt container */}
-        <div className="p-6 bg-[#fafafa] font-mono text-xs text-slate-800 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 bg-[#fafafa] font-mono text-xs text-slate-800 space-y-3 sm:space-y-4 flex-1 overflow-y-auto no-scrollbar">
           {/* Header */}
           <div className="text-center space-y-1">
             <img src="/logo.png" alt="PT Pro Teknologi" className="h-8 mx-auto object-contain mb-1" />
@@ -132,17 +132,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
         </div>
 
         {/* Footer print buttons */}
-        <div className="p-3 bg-white border-t border-slate-200 flex gap-2">
+        <div className="p-3 bg-white border-t border-slate-200 flex gap-2 shrink-0">
           <button
             onClick={() => window.print()}
-            className="flex-1 py-2 bg-[#002045] hover:bg-[#001733] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs tactile-btn"
+            className="flex-1 py-2.5 min-h-[42px] bg-[#002045] hover:bg-[#001733] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs tactile-btn active:scale-95"
           >
             <span className="material-symbols-outlined text-base">print</span>
             <span>Cetak Struk Thermal</span>
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition"
+            className="px-4 py-2.5 min-h-[42px] border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition active:scale-95"
           >
             Tutup
           </button>

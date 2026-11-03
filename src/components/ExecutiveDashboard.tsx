@@ -16,37 +16,37 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   onOpenReceipt,
 }) => {
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f8f9ff] p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto bg-[#f8f9ff] p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Executive Welcome Bar */}
-      <div className="bg-gradient-to-r from-[#002045] to-[#003875] text-white rounded-2xl p-6 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center p-1 backdrop-blur-xs">
-            <img src="/logo.png" alt="PT Pro Teknologi" className="h-10 w-auto object-contain" />
+      <div className="bg-gradient-to-r from-[#002045] to-[#003875] text-white rounded-2xl p-4 sm:p-6 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center p-1 backdrop-blur-xs shrink-0">
+            <img src="/logo.png" alt="PT Pro Teknologi" className="h-8 sm:h-10 w-auto object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-mono uppercase tracking-wider">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[9px] sm:text-[10px] font-mono uppercase tracking-wider">
                 Executive Owner Terminal
               </span>
-              <span className="text-xs text-sky-200">PT Pro Teknologi Showcase</span>
+              <span className="text-[11px] sm:text-xs text-sky-200 hidden sm:inline">PT Pro Teknologi Showcase</span>
             </div>
-            <h1 className="text-2xl font-display font-extrabold tracking-tight mt-1">
+            <h1 className="text-lg sm:text-2xl font-display font-extrabold tracking-tight mt-0.5 sm:mt-1">
               Laporan Keuangan & HPP Real-time
             </h1>
-            <p className="text-xs text-sky-200 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-sky-200 mt-0.5">
               Cabang: <strong>Mall Grand Indonesia (GI-01)</strong> | Periode: <strong>Hari Ini (Live)</strong>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="bg-white/10 border border-white/15 px-4 py-2.5 rounded-xl backdrop-blur-xs text-right">
-            <span className="text-[10px] text-sky-200 uppercase font-semibold block">Total Transaksi</span>
-            <span className="text-xl font-display font-bold">{orders.length} Pesanan</span>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full md:w-auto shrink-0">
+          <div className="bg-white/10 border border-white/15 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl backdrop-blur-xs text-center md:text-right">
+            <span className="text-[9px] sm:text-[10px] text-sky-200 uppercase font-semibold block">Total Transaksi</span>
+            <span className="text-base sm:text-xl font-display font-bold">{orders.length} Pesanan</span>
           </div>
-          <div className="bg-emerald-500/20 border border-emerald-400/30 px-4 py-2.5 rounded-xl backdrop-blur-xs text-right">
-            <span className="text-[10px] text-emerald-200 uppercase font-semibold block">Margin Keuntungan</span>
-            <span className="text-xl font-display font-bold text-emerald-300">
+          <div className="bg-emerald-500/20 border border-emerald-400/30 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl backdrop-blur-xs text-center md:text-right">
+            <span className="text-[9px] sm:text-[10px] text-emerald-200 uppercase font-semibold block">Margin Keuntungan</span>
+            <span className="text-base sm:text-xl font-display font-bold text-emerald-300">
               {financials.profitMarginPct}%
             </span>
           </div>
@@ -54,74 +54,74 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
       </div>
 
       {/* KPI 5-Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
         {/* Card 1: Omzet */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 mb-1.5 sm:mb-2">
             <span className="text-xs font-semibold">Total Omzet</span>
             <span className="material-symbols-outlined text-[#0284c7] text-lg">trending_up</span>
           </div>
-          <div className="text-xl font-display font-bold text-[#002045]">
+          <div className="text-base sm:text-xl font-display font-bold text-[#002045] truncate">
             {formatRupiah(financials.totalRevenue)}
           </div>
-          <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-0.5 mt-1">
+          <span className="text-[10px] sm:text-[11px] text-emerald-600 font-medium flex items-center gap-0.5 mt-1">
             <span className="material-symbols-outlined text-xs">arrow_upward</span>
             +18.4% vs kemarin
           </span>
         </div>
 
         {/* Card 2: HPP Total */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 mb-1.5 sm:mb-2">
             <span className="text-xs font-semibold">HPP Bahan Baku</span>
             <span className="material-symbols-outlined text-amber-500 text-lg">inventory_2</span>
           </div>
-          <div className="text-xl font-display font-bold text-slate-800">
+          <div className="text-base sm:text-xl font-display font-bold text-slate-800 truncate">
             {formatRupiah(financials.totalHpp)}
           </div>
-          <span className="text-[11px] text-slate-500 mt-1 block">
+          <span className="text-[10px] sm:text-[11px] text-slate-500 mt-1 block">
             {((financials.totalHpp / (financials.totalRevenue || 1)) * 100).toFixed(1)}% food cost ratio
           </span>
         </div>
 
         {/* Card 3: Laba Kotor */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 mb-1.5 sm:mb-2">
             <span className="text-xs font-semibold">Laba Kotor</span>
             <span className="material-symbols-outlined text-emerald-600 text-lg">account_balance_wallet</span>
           </div>
-          <div className="text-xl font-display font-bold text-emerald-700">
+          <div className="text-base sm:text-xl font-display font-bold text-emerald-700 truncate">
             {formatRupiah(financials.grossProfit)}
           </div>
-          <span className="text-[11px] text-emerald-600 mt-1 block">
-            Sebelum biaya tetap operasional
+          <span className="text-[10px] sm:text-[11px] text-emerald-600 mt-1 block">
+            Sebelum beban operasional
           </span>
         </div>
 
         {/* Card 4: Biaya Operasional */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 mb-1.5 sm:mb-2">
             <span className="text-xs font-semibold">Biaya Tetap (Sewa/Listrik)</span>
             <span className="material-symbols-outlined text-rose-500 text-lg">receipt</span>
           </div>
-          <div className="text-xl font-display font-bold text-slate-800">
+          <div className="text-base sm:text-xl font-display font-bold text-slate-800 truncate">
             {formatRupiah(75000)}
           </div>
-          <span className="text-[11px] text-slate-500 mt-1 block">
+          <span className="text-[10px] sm:text-[11px] text-slate-500 mt-1 block">
             Alokasi harian outlet
           </span>
         </div>
 
         {/* Card 5: Laba Bersih */}
-        <div className="bg-white rounded-xl p-4 border-2 border-[#0284c7]/30 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
+        <div className="col-span-2 lg:col-span-1 bg-white rounded-xl p-3 sm:p-4 border-2 border-[#0284c7]/30 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 mb-1.5 sm:mb-2">
             <span className="text-xs font-bold text-[#002045]">Laba Bersih (Net)</span>
             <span className="material-symbols-outlined text-[#0284c7] text-lg">savings</span>
           </div>
-          <div className="text-xl font-display font-extrabold text-[#0284c7]">
+          <div className="text-lg sm:text-xl font-display font-extrabold text-[#0284c7] truncate">
             {formatRupiah(financials.netProfit)}
           </div>
-          <span className="text-[11px] font-bold text-emerald-600 mt-1 block">
+          <span className="text-[10px] sm:text-[11px] font-bold text-emerald-600 mt-1 block">
             {financials.profitMarginPct}% Profit Margin
           </span>
         </div>
@@ -218,8 +218,8 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto no-scrollbar">
+          <table className="w-full min-w-[540px] text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 font-display font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">Kode</th>
@@ -274,8 +274,8 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
           <span className="text-xs text-slate-500">Sinkronisasi Cloud POS API</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto no-scrollbar">
+          <table className="w-full min-w-[540px] text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 font-display font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">No. Invoice</th>

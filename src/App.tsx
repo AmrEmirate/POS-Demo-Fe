@@ -212,6 +212,7 @@ export function App() {
           onOpenQris={() => setIsQrisOpen(true)}
           onOpenCash={() => setIsCashOpen(true)}
           searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
         />
       ) : (
         <ExecutiveDashboard
