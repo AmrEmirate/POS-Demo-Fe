@@ -1,249 +1,179 @@
-import { useState, useEffect } from 'react';
-import { MenuItem, CartItem, Order, OrderType, PaymentMethod } from './types';
-import {
-  INITIAL_MENUS,
-  INITIAL_ORDERS,
-  calculateFinancials,
-  API_BASE_URL,
-} from './services/api';
-import { TopNav } from './components/TopNav';
-import { PosTerminal } from './components/PosTerminal';
-import { ExecutiveDashboard } from './components/ExecutiveDashboard';
-import { QrisModal } from './components/QrisModal';
-import { CashModal } from './components/CashModal';
-import { ReceiptModal } from './components/ReceiptModal';
-import { LoginPage, UserAccount } from './components/LoginPage';
+import React from 'react';
+import { useApp } from './context/AppContext';
+import { Sidebar } from './components/layout/Sidebar';
+import { Header } from './components/layout/Header';
+import { NotificationToast } from './components/common/NotificationToast';
 
-export function App() {
-  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
-  const [activeTab, setActiveTab] = useState<'pos' | 'dashboard'>('pos');
-  const [menus, setMenus] = useState<MenuItem[]>(INITIAL_MENUS);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [orderType, setOrderType] = useState<OrderType>('DINE_IN');
-  const [tableNumber, setTableNumber] = useState<string>('Meja 01');
-  const [customerName, setCustomerName] = useState<string>('Pelanggan Walk-In');
-  const [discount, setDiscount] = useState<number>(0);
+import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { PosPage } from './pages/PosPage';
+import { ShiftPage } from './pages/ShiftPage';
+import { MenuHppPage } from './pages/MenuHppPage';
+import { PettyCashPage } from './pages/PettyCashPage';
+import { FixedExpensesPage } from './pages/FixedExpensesPage';
+import { ProfitLossPage } from './pages/ProfitLossPage';
+import { BranchesPage } from './pages/BranchesPage';
+import { SubscriptionBillingPage } from './pages/SubscriptionBillingPage';
+import { WalletWithdrawalPage } from './pages/WalletWithdrawalPage';
 
-  // Modals state
-  const [isQrisOpen, setIsQrisOpen] = useState<boolean>(false);
-  const [isCashOpen, setIsCashOpen] = useState<boolean>(false);
-  const [activeReceipt, setActiveReceipt] = useState<Order | null>(null);
+import { BottomNav } from './components/layout/BottomNav';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { SubscriptionPaywallGuard } from './components/common/SubscriptionPaywallGuard';
 
-  // Attempt to fetch live menus from API on load
-  useEffect(() => {
-    const fetchLiveMenus = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/menus`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            setMenus(json.data);
-          }
-        }
-      } catch {
-        // Fallback to initial Google Stitch menus
-        console.log('Using local pre-seeded menus');
-      }
-    };
-    fetchLiveMenus();
-  }, []);
+export const AppContent: React.FC = () => {
+  const { currentView, isAuthenticated, currentUser, billingStatus, setCurrentView } = useApp();
 
-  // Keyboard shortcut [F2] to focus search, [Escape] to close modals
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F2') {
-        e.preventDefault();
-        const input = document.querySelector('input[type="text"]') as HTMLInputElement;
-        if (input) input.focus();
-      }
-      if (e.key === 'Escape') {
-        setIsQrisOpen(false);
-        setIsCashOpen(false);
-        setActiveReceipt(null);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Cart operations
-  const addToCart = (item: MenuItem) => {
-    setCart((prev) => {
-      const existing = prev.find((it) => it.menuItem.id === item.id);
-      if (existing) {
-        return prev.map((it) =>
-          it.menuItem.id === item.id ? { ...it, quantity: it.quantity + 1 } : it
-        );
-      }
-      return [...prev, { menuItem: item, quantity: 1 }];
-    });
-  };
-
-  const updateQuantity = (menuId: string, delta: number) => {
-    setCart((prev) => {
-      return prev
-        .map((it) => {
-          if (it.menuItem.id === menuId) {
-            const newQty = it.quantity + delta;
-            return newQty > 0 ? { ...it, quantity: newQty } : null;
-          }
-          return it;
-        })
-        .filter(Boolean) as CartItem[];
-    });
-  };
-
-  const removeFromCart = (menuId: string) => {
-    setCart((prev) => prev.filter((it) => it.menuItem.id !== menuId));
-  };
-
-  const clearCart = () => {
-    setCart([]);
-    setDiscount(0);
-  };
-
-  // Grand Total calculation
-  const subtotal = cart.reduce((acc, it) => acc + it.menuItem.price * it.quantity, 0);
-  const taxableAmount = Math.max(0, subtotal - discount);
-  const tax = Math.round(taxableAmount * 0.1);
-  const grandTotal = taxableAmount + tax;
-
-  // Finalize order & submit
-  const handleCompleteOrder = async (
-    method: PaymentMethod,
-    cashReceived?: number,
-    changeAmount?: number
-  ) => {
-    const hppTotal = cart.reduce((acc, it) => acc + it.menuItem.costPrice * it.quantity, 0);
-    const invoiceNumber = `INV-DEMO-${String(orders.length + 1).padStart(3, '0')}`;
-
-    const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      invoiceNumber,
-      customerName: customerName.trim() || 'Pelanggan Umum',
-      tableNumber: orderType === 'DINE_IN' ? tableNumber : null,
-      orderType,
-      items: cart.map((it) => ({
-        menuId: it.menuItem.id,
-        name: it.menuItem.name,
-        price: it.menuItem.price,
-        costPrice: it.menuItem.costPrice,
-        quantity: it.quantity,
-      })),
-      subtotal,
-      discount,
-      tax,
-      total: grandTotal,
-      hppTotal,
-      paymentMethod: method,
-      cashReceived: cashReceived || null,
-      changeAmount: changeAmount || null,
-      cashierName: 'Budi Santoso',
-      createdAt: new Date().toISOString(),
-    };
-
-    // Update state
-    setOrders((prev) => [newOrder, ...prev]);
-    clearCart();
-    setIsQrisOpen(false);
-    setIsCashOpen(false);
-    setActiveReceipt(newOrder);
-
-    // Optional background sync to API
-    try {
-      fetch(`${API_BASE_URL}/pos/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newOrder),
-      }).catch(() => {});
-    } catch {
-      // Ignored in offline demo mode
-    }
-  };
-
-  const financials = calculateFinancials(orders);
-
-  if (!currentUser) {
+  if (!isAuthenticated) {
     return (
-      <LoginPage
-        onLogin={(user) => {
-          setCurrentUser(user);
-          if (user.role === 'OWNER') {
-            setActiveTab('dashboard');
-          } else {
-            setActiveTab('pos');
-          }
-        }}
-      />
+      <>
+        <LoginPage />
+        <NotificationToast />
+      </>
     );
   }
 
+  const isSubscriptionActive = billingStatus?.isSubscriptionActive ?? true;
+  const isOperationalLocked = billingStatus !== null && !isSubscriptionActive;
+
+  const renderCurrentView = () => {
+    if (isOperationalLocked) {
+      const lockedViews = [
+        'transaksi-kasir-pos',
+        'sesi-shift-kasir',
+        'master-menu-dimsum-hpp',
+        'kas-kecil-outlet',
+        'beban-operasional-tetap',
+        'laporan-laba-rugi-arus-kas',
+        'dompet-penarikan-saldo',
+      ];
+      if (lockedViews.includes(currentView)) {
+        return (
+          <SubscriptionPaywallGuard
+            featureName={
+              currentView === 'transaksi-kasir-pos'
+                ? 'Kasir POS'
+                : currentView === 'master-menu-dimsum-hpp'
+                ? 'Master Menu & HPP'
+                : currentView === 'sesi-shift-kasir'
+                ? 'Sesi Shift Kasir'
+                : currentView === 'dompet-penarikan-saldo'
+                ? 'Dompet & Penarikan Saldo'
+                : 'Fitur Operasional & Keuangan'
+            }
+          />
+        );
+      }
+    }
+
+    const role = currentUser.role;
+    const ownerOnlyViews = [
+      'dompet-penarikan-saldo',
+      'langganan-billing',
+    ];
+    const financeAllowedViews = [
+      'beban-operasional-tetap',
+      'laporan-laba-rugi-arus-kas',
+    ];
+    const kasirAllowedViews = [
+      'transaksi-kasir-pos',
+      'sesi-shift-kasir',
+      'kas-kecil-outlet',
+    ];
+
+    if (role === 'KASIR' && !kasirAllowedViews.includes(currentView)) {
+      return <PosPage />;
+    }
+    if (role !== 'OWNER' && ownerOnlyViews.includes(currentView)) {
+      return <DashboardPage />;
+    }
+    if (role !== 'OWNER' && role !== 'AKUNTAN' && financeAllowedViews.includes(currentView)) {
+      return <DashboardPage />;
+    }
+    if (role === 'AKUNTAN' && (currentView === 'master-cabang-outlet' || currentView === 'master-menu-dimsum-hpp')) {
+      return <DashboardPage />;
+    }
+    if (role === 'INVENTORY' && (currentView === 'master-cabang-outlet' || currentView === 'kas-kecil-outlet')) {
+      return <DashboardPage />;
+    }
+    if (role !== 'KASIR' && currentView === 'transaksi-kasir-pos') {
+      return <DashboardPage />;
+    }
+
+    switch (currentView) {
+      case 'dashboard-utama':
+        return <DashboardPage />;
+      case 'master-cabang-outlet':
+        return <BranchesPage />;
+      case 'transaksi-kasir-pos':
+        return <PosPage />;
+      case 'sesi-shift-kasir':
+        return <ShiftPage />;
+      case 'master-menu-dimsum-hpp':
+        return <MenuHppPage />;
+      case 'kas-kecil-outlet':
+        return <PettyCashPage />;
+      case 'beban-operasional-tetap':
+        return <FixedExpensesPage />;
+      case 'laporan-laba-rugi-arus-kas':
+        return <ProfitLossPage />;
+      case 'langganan-billing':
+        return <SubscriptionBillingPage />;
+      case 'dompet-penarikan-saldo':
+        return <WalletWithdrawalPage />;
+      default:
+        return <DashboardPage />;
+    }
+  };
+
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f8f9ff]">
-      {/* Top Navigation */}
-      <TopNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        currentUser={currentUser}
-        onLogout={() => setCurrentUser(null)}
-      />
+    <div className="min-h-screen bg-surface-canvas text-on-surface antialiased flex">
+      {/* Fixed Left Navigation Sidebar */}
+      <Sidebar />
 
-      {/* Main View Area */}
-      {activeTab === 'pos' ? (
-        <PosTerminal
-          menus={menus}
-          cart={cart}
-          addToCart={addToCart}
-          updateQuantity={updateQuantity}
-          removeFromCart={removeFromCart}
-          clearCart={clearCart}
-          orderType={orderType}
-          setOrderType={setOrderType}
-          tableNumber={tableNumber}
-          setTableNumber={setTableNumber}
-          customerName={customerName}
-          setCustomerName={setCustomerName}
-          discount={discount}
-          setDiscount={setDiscount}
-          onOpenQris={() => setIsQrisOpen(true)}
-          onOpenCash={() => setIsCashOpen(true)}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-        />
-      ) : (
-        <ExecutiveDashboard
-          orders={orders}
-          menus={menus}
-          financials={financials}
-          onOpenReceipt={(ord) => setActiveReceipt(ord)}
-        />
-      )}
+      {/* Main Content Area */}
+      <div className="flex-1 pl-0 lg:pl-72 flex flex-col min-h-screen w-full overflow-x-hidden">
+        {/* Fixed Top Header */}
+        <Header />
 
-      {/* Modals */}
-      <QrisModal
-        isOpen={isQrisOpen}
-        onClose={() => setIsQrisOpen(false)}
-        grandTotal={grandTotal}
-        onSuccessPay={() => handleCompleteOrder('QRIS')}
-      />
+        {/* Unpaid / Expired Subscription Paywall Alert Strip */}
+        {isOperationalLocked && (
+          <div className="mt-16 bg-amber-500 text-amber-950 px-4 py-2.5 text-xs font-bold flex flex-wrap items-center justify-between gap-2 shadow-xs border-b border-amber-600/30 z-30">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+              <span>Paket Langganan Belum Aktif / Telah Kadaluarsa. Seluruh fitur operasional kasir terkunci.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCurrentView('langganan-billing')}
+              className="px-3 py-1 bg-brand-espresso text-white text-[11px] font-bold rounded-lg hover:bg-black transition-all cursor-pointer shadow-xs active:scale-95"
+            >
+              ⚡ Aktifkan Langganan Sekarang
+            </button>
+          </div>
+        )}
 
-      <CashModal
-        isOpen={isCashOpen}
-        onClose={() => setIsCashOpen(false)}
-        grandTotal={grandTotal}
-        onSuccessPay={(received, change) => handleCompleteOrder('CASH', received, change)}
-      />
+        {/* Dynamic Page Workspace */}
+        <main className={`flex-1 ${isOperationalLocked ? 'pt-6' : 'pt-20'} px-3 sm:px-6 pb-32 lg:pb-12 w-full max-w-[1600px] mx-auto`}>
+          <ErrorBoundary>
+            {renderCurrentView()}
+          </ErrorBoundary>
+        </main>
+      </div>
 
-      <ReceiptModal
-        order={activeReceipt}
-        onClose={() => setActiveReceipt(null)}
-      />
+      {/* Persistent Bottom Navigation for Mobile & Tablet */}
+      <BottomNav />
+
+      {/* Floating System Toast Notifications */}
+      <NotificationToast />
     </div>
+  );
+};
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }
 
-export default App;

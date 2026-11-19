@@ -1,0 +1,361 @@
+export type UserRole = 'OWNER' | 'SUPERVISOR' | 'KASIR' | 'AKUNTAN' | 'INVENTORY';
+
+export interface TenantInfo {
+  id: string;
+  name: string;
+  slug: string;
+  customDomain?: string | null;
+  logoUrl?: string | null;
+  themeColor?: string;
+  themeConfig?: any;
+  plan: string;
+  status: string;
+  licenseKey?: string;
+  pricePerOutlet?: number;
+  maxOutlets?: number;
+  dailyTxLimitPerOutlet?: number;
+  extraDailyTxLimit?: number;
+  subscriptionExpiresAt?: string | null;
+  counts?: {
+    outlets: number;
+    users: number;
+    menus: number;
+    orders: number;
+  };
+  totalGmv?: number;
+  createdAt?: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  username?: string;
+  role: UserRole;
+  outletId?: string;
+  outletName?: string;
+  tenantId?: string;
+  tenant?: TenantInfo | null;
+  avatar?: string;
+  createdAt?: string;
+}
+
+export interface Outlet {
+  id: 'du' | 'riau' | 'batu' | string;
+  code: string;
+  name: string;
+  city: string;
+  address: string;
+  manager?: string;
+  phone: string;
+  targetDailySales: number;
+  plan?: string;
+  planName?: string;
+  dailyTxLimit?: number;
+  monthlyTxLimit?: number;
+  isUnlimited?: boolean;
+  currentMonthTxCount?: number;
+}
+
+export type MenuCategory = string;
+
+export interface MenuItem {
+  id: string;
+  code: string;
+  name: string;
+  category: MenuCategory;
+  price: number;
+  costPrice: number; // HPP dari pabrik
+  stock: number;
+  description: string;
+  image: string;
+  isAvailable: boolean;
+  isBestSeller?: boolean;
+  isSoftDeleted?: boolean;
+}
+
+export type OrderType = 'dine-in' | 'takeaway';
+export type PaymentMethod = 'CASH' | 'QRIS' | 'DUITKU_QRIS';
+
+export interface OrderCartItem {
+  menuId: string;
+  name: string;
+  price: number;
+  costPrice: number;
+  quantity: number;
+  notes?: string;
+}
+
+export interface Order {
+  id: string;
+  invoiceNumber: string;
+  outletId: string;
+  outletName: string;
+  orderType: OrderType;
+  tableNumber?: string;
+  customerName?: string;
+  items: OrderCartItem[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  hppTotal: number;
+  paymentMethod: PaymentMethod;
+  cashReceived?: number;
+  changeAmount?: number;
+  cashierName: string;
+  status: 'PAID' | 'VOIDED';
+  voidReason?: string;
+  voidAuthorizedBy?: string;
+  createdAt: string;
+}
+
+export interface ShiftSession {
+  id: string;
+  shiftName: string;
+  outletId: string;
+  outletName: string;
+  cashierId: string;
+  cashierName: string;
+  terminalId: string;
+  startTime: string;
+  endTime?: string;
+  startingCash: number; // Modal awal di laci kasir
+  cashSales: number;    // Penjualan tunai selama shift
+  qrisSales: number;    // Penjualan QRIS
+  pettyCashOut: number; // Pengeluaran kas kecil darurat dari laci
+  expectedCash: number; // Formula: startingCash + cashSales - pettyCashOut
+  actualEndingCash?: number; // Fisik uang saat tutup shift
+  difference?: number;       // actualEndingCash - expectedCash
+  notes?: string;
+  status: 'ACTIVE' | 'CLOSED';
+}
+
+export type Shift = ShiftSession;
+
+export type PettyCashCategory = 'ES_BATU' | 'GALON_AIR' | 'PLASTIK_KEMASAN' | 'KEBERSIHAN' | 'LAINNYA';
+
+export interface PettyCashExpense {
+  id: string;
+  expenseNumber: string;
+  outletId: string;
+  outletName: string;
+  cashierName: string;
+  amount: number;
+  category: PettyCashCategory;
+  description: string;
+  receiptImageUrl: string;
+  status: 'MENUNGGU_VERIFIKASI' | 'DISETUJUI' | 'DITOLAK';
+  verifiedBy?: string;
+  verifiedAt?: string;
+  createdAt: string;
+}
+
+export type PettyCashTransaction = PettyCashExpense;
+
+export interface FactoryInvoiceItem {
+  itemName: string;
+  quantity: number;
+  unit: string;
+  unitCost: number;
+  total: number;
+}
+
+export interface FactoryInvoice {
+  id: string;
+  invoiceNumber: string;
+  supplierName: string;
+  outletId: string;
+  outletName: string;
+  issueDate: string;
+  dueDate: string;
+  totalAmount: number;
+  status: 'LUNAS' | 'BELUM_LUNAS' | 'JATUH_TEMPO';
+  items: FactoryInvoiceItem[];
+  proofImageUrl?: string;
+  paidAt?: string;
+  bankAccount: string;
+}
+
+export type FixedExpenseCategory = string;
+
+export interface FixedExpense {
+  id: string;
+  code: string;
+  title: string;
+  category: FixedExpenseCategory;
+  outletId: string;
+  outletName: string;
+  amount: number;
+  period: string; // Misal: "Oktober 2024"
+  status: 'LUNAS' | 'TERJADWAL';
+  dueDate: string;
+  autoDebet: boolean;
+}
+
+export interface PlanConfig {
+  code: string;
+  name: string;
+  price: number;
+  dailyTxLimit: number;
+  monthlyTxLimit: number;
+  description: string;
+}
+
+export interface BillingOutletStat {
+  id: string;
+  code: string;
+  name: string;
+  plan?: string;
+  planName?: string;
+  planPrice?: number;
+  todayOrders: number;
+  monthOrders?: number;
+  dailyLimit: number;
+  monthlyLimit?: number;
+  isUnlimited?: boolean;
+  remaining: number | string;
+  remainingMonth?: number | string;
+}
+
+export interface BillingStatus {
+  tenantId: string;
+  tenantName: string;
+  plan: string;
+  planDetails?: PlanConfig;
+  status: string;
+  licenseKey?: string | null;
+  pricePerOutlet: number;
+  currentOutletsCount: number;
+  maxOutlets: number;
+  canAddOutlet: boolean;
+  dailyTxLimitPerOutlet: number;
+  monthlyTxLimitPerOutlet?: number;
+  extraDailyTxLimit: number;
+  effectiveDailyTxLimit: number;
+  effectiveMonthlyTxLimit?: number;
+  todayOrdersCount: number;
+  monthOrdersCount?: number;
+  remainingMonthOrders?: number | string;
+  isUnlimited?: boolean;
+  isSubscriptionActive: boolean;
+  subscriptionExpiresAt: string | null;
+  daysRemaining: number;
+  outlets: BillingOutletStat[];
+  availablePlans?: PlanConfig[];
+}
+
+export interface SubscriptionInvoice {
+  id: string;
+  tenantId: string;
+  invoiceNumber: string;
+  type: 'RENEWAL' | 'ADD_OUTLET' | 'ADD_TX_QUOTA' | string;
+  description: string;
+  amount: number;
+  status: 'PENDING' | 'PENDING_APPROVAL' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+  paymentMethod?: string | null;
+  snapToken?: string | null;
+  snapRedirectUrl?: string | null;
+  paymentGatewayRef?: string | null;
+  paidAt?: string | null;
+  expiresAt: string;
+  createdAt: string;
+  metadata?: any;
+}
+
+export interface WalletTransaction {
+  id: string;
+  tenantId: string;
+  outletId?: string | null;
+  outlet?: { id: string; name: string; code: string };
+  type: 'CREDIT' | 'DEBIT';
+  category: 'POS_SALES' | 'WITHDRAWAL' | 'ADJUSTMENT' | 'REFUND' | string;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  referenceId?: string | null;
+  description: string;
+  createdAt: string;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  tenantId: string;
+  withdrawalNumber: string;
+  amount: number;
+  fee: number;
+  netAmount: number;
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountName: string;
+  status: 'PENDING' | 'PROCESSED' | 'REJECTED';
+  notes?: string | null;
+  rejectionReason?: string | null;
+  proofImageUrl?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+}
+
+export interface WalletSummary {
+  walletBalance: number;
+  totalCredited: number;
+  totalDebited: number;
+  pendingWithdrawalAmount: number;
+  pendingWithdrawalCount: number;
+  bankInfo: {
+    bankName: string;
+    bankAccountNumber: string;
+    bankAccountName: string;
+  };
+  recentTransactions: WalletTransaction[];
+  recentWithdrawals: WithdrawalRequest[];
+}
+
+export interface RawMaterial {
+  id: string;
+  outletId?: string | null;
+  name: string;
+  unit: string;
+  costPerUnit: number;
+  currentStock: number;
+  minStock: number;
+  isLowStock?: boolean;
+}
+
+export interface MenuRecipeItem {
+  id?: string;
+  menuId: string;
+  menuName?: string;
+  rawMaterialId: string;
+  rawMaterialName?: string;
+  unit?: string;
+  costPerUnit?: number;
+  quantityUsed: number;
+}
+
+export interface ShiftMaterialOpnameInput {
+  rawMaterialId: string;
+  actualClosing: number;
+  restockIn?: number;
+  notes?: string;
+}
+
+export interface ShiftMaterialOpnameAudit {
+  id: string;
+  shiftId: string;
+  shiftName: string;
+  outletName: string;
+  cashierName: string;
+  shiftEndTime: string;
+  rawMaterialId: string;
+  materialName: string;
+  unit: string;
+  openingStock: number;
+  restockIn: number;
+  theoreticalUsed: number;
+  expectedClosing: number;
+  actualClosing: number;
+  variance: number;
+  varianceValue: number;
+  status: 'NORMAL' | 'LEAKAGE' | 'SURPLUS';
+  notes?: string;
+}
+

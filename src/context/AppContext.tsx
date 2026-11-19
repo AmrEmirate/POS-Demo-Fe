@@ -1,0 +1,1970 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import {
+  UserRole,
+  User,
+  TenantInfo,
+  Outlet,
+  MenuItem,
+  Order,
+  OrderCartItem,
+  OrderType,
+  PaymentMethod,
+  ShiftSession,
+  PettyCashExpense,
+  FactoryInvoice,
+  FixedExpense,
+  BillingStatus,
+  SubscriptionInvoice,
+  WalletSummary,
+  WalletTransaction,
+  WithdrawalRequest,
+  RawMaterial,
+  MenuRecipeItem,
+  ShiftMaterialOpnameInput,
+  ShiftMaterialOpnameAudit,
+} from '../types';
+import {
+  api,
+  setAuthToken,
+  clearAuthToken,
+  getAuthToken,
+  getTenantSlug,
+  setTenantSlug,
+  clearTenantSlug,
+  getActiveTenantId,
+  setActiveTenantId,
+  clearActiveTenantId,
+} from '../services/apiClient';
+import {
+  parsePathToRoute,
+  buildCanonicalPath,
+  VIEW_TITLES,
+} from '../utils/routeUtils';
+
+export type AppView =
+  | 'dashboard-utama'
+  | 'master-cabang-outlet'
+  | 'transaksi-kasir-pos'
+  | 'sesi-shift-kasir'
+  | 'master-menu-dimsum-hpp'
+  | 'kas-kecil-outlet'
+  | 'beban-operasional-tetap'
+  | 'laporan-laba-rugi-arus-kas'
+  | 'dompet-penarikan-saldo'
+  | 'langganan-billing';
+
+interface NotificationState {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
+interface AppContextType {
+  // Multi-Tenant & Branding State
+  currentTenant: TenantInfo | null;
+  setCurrentTenant: (tenant: TenantInfo | null) => void;
+  loadTenantMeta: (slugOrDomain?: string) => Promise<TenantInfo | null>;
+  switchTenantView: (tenantId: string | null, tenantSlug?: string | null) => Promise<void>;
+
+  // User & Auth State
+  currentUser: User;
+  isAuthenticated: boolean;
+  login: (username: string, password?: string, role?: UserRole) => Promise<boolean>;
+  loginWithGoogle: (credential: string) => Promise<{ ok: boolean; message?: string }>;
+  loginWithToken: (token: string) => Promise<boolean>;
+  logout: () => void;
+  switchRole: (role: UserRole) => void;
+
+  // Outlet State
+  outlets: Outlet[];
+  selectedOutletId: string; // 'all' | 'du' | 'riau' | 'batu'
+  setSelectedOutletId: (id: string) => void;
+  getActiveOutlet: () => Outlet | undefined;
+  createOutlet: (outlet: Omit<Outlet, 'id'>) => Promise<boolean>;
+  updateOutlet: (id: string, outlet: Partial<Outlet>) => Promise<boolean>;
+  deleteOutlet: (id: string) => Promise<boolean>;
+
+  // Staff / User Management
+  staffList: User[];
+  fetchStaffList: () => Promise<void>;
+  createStaffUser: (data: {
+    name: string;
+    username: string;
+    password: string;
+    role: UserRole;
+    outletId?: string;
+    pin?: string;
+  }) => Promise<boolean>;
+  updateStaffUser: (
+    id: string,
+    data: {
+      name: string;
+      username: string;
+      password?: string;
+      role: UserRole;
+      outletId?: string;
+      pin?: string;
+    }
+  ) => Promise<boolean>;
+  updateOwnProfile: (data: {
+    name: string;
+    username: string;
+    password?: string;
+  }) => Promise<boolean>;
+  deleteStaffUser: (id: string) => Promise<boolean>;
+
+  // View Navigation
+  currentView: AppView;
+  setCurrentView: (view: AppView) => void;
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
+
+  // Notifications
+  notification: NotificationState | null;
+  showNotification: (message: string, type?: NotificationState['type']) => void;
+
+  // POS & Cart
+  menuItems: MenuItem[];
+  cart: OrderCartItem[];
+  orderType: OrderType;
+  setOrderType: (type: OrderType) => void;
+  tableNumber: string;
+  setTableNumber: (table: string) => void;
+  customerName: string;
+  setCustomerName: (name: string) => void;
+  addToCart: (menu: MenuItem) => void;
+  updateCartQty: (menuId: string, delta: number) => void;
+  updateCartNotes: (menuId: string, notes: string) => void;
+  removeFromCart: (menuId: string) => void;
+  clearCart: () => void;
+  processCheckout: (
+    paymentMethod: PaymentMethod,
+    cashReceived?: number,
+    discount?: number
+  ) => Promise<Order | null>;
+
+  // Orders History & Voiding
+  orders: Order[];
+  voidOrder: (orderId: string, reason: string, supervisorPin: string) => Promise<boolean>;
+  verifyPin: (pin: string) => boolean;
+
+  // Shift & Cash Reconciliation
+  activeShift: ShiftSession | null;
+  shiftHistory: ShiftSession[];
+  openShift: (startingCash: number) => Promise<void>;
+  closeShift: (
+    actualEndingCash: number,
+    notes?: string,
+    materialOpnames?: ShiftMaterialOpnameInput[]
+  ) => Promise<void>;
+  fetchShiftHistory: () => Promise<void>;
+
+  // Raw Materials, Menu Recipes (BOM) & Opname Audit
+  rawMaterials: RawMaterial[];
+  menuRecipes: MenuRecipeItem[];
+  opnameAuditLogs: ShiftMaterialOpnameAudit[];
+  fetchRawMaterials: () => Promise<void>;
+  createRawMaterial: (payload: Omit<RawMaterial, 'id'>) => Promise<boolean>;
+  updateRawMaterial: (id: string, payload: Partial<RawMaterial> & { addStock?: number }) => Promise<boolean>;
+  deleteRawMaterial: (id: string) => Promise<boolean>;
+  fetchMenuRecipes: () => Promise<void>;
+  saveMenuRecipe: (menuId: string, items: Array<{ rawMaterialId: string; quantityUsed: number }>) => Promise<boolean>;
+  fetchOpnameAudit: (shiftId?: string) => Promise<void>;
+
+  // Petty Cash
+  pettyCashList: PettyCashExpense[];
+  addPettyCash: (
+    amount: number,
+    category: PettyCashExpense['category'],
+    description: string,
+    receiptImage?: File | string | null
+  ) => Promise<boolean>;
+  updatePettyCash: (
+    id: string,
+    amount: number,
+    category: PettyCashExpense['category'],
+    description: string
+  ) => Promise<boolean>;
+  verifyPettyCash: (id: string, status: 'DISETUJUI' | 'DITOLAK') => Promise<void>;
+  deletePettyCash: (id: string, pin: string) => Promise<boolean>;
+
+  // Master Menu & HPP
+  addMenuItem: (menu: Omit<MenuItem, 'id' | 'code'>) => Promise<MenuItem | null>;
+  updateMenuItem: (id: string, menu: Partial<MenuItem>) => Promise<void>;
+  deleteMenuItem: (id: string) => Promise<void>;
+  toggleMenuAvailability: (id: string) => Promise<void>;
+
+  // Factory Invoices
+  factoryInvoices: FactoryInvoice[];
+  addFactoryInvoice: (invoice: Omit<FactoryInvoice, 'id' | 'invoiceNumber'>) => Promise<void>;
+  updateFactoryInvoice: (id: string, invoice: Partial<FactoryInvoice>) => Promise<boolean>;
+  markInvoicePaid: (id: string, proofImageUrl?: string) => Promise<void>;
+  deleteFactoryInvoice: (id: string) => Promise<boolean>;
+
+  // Fixed OPEX
+  fixedExpenses: FixedExpense[];
+  addFixedExpense: (expense: Omit<FixedExpense, 'id' | 'code'>) => Promise<void>;
+  updateFixedExpense: (id: string, expense: Partial<FixedExpense>) => Promise<boolean>;
+  toggleFixedExpenseStatus: (id: string) => Promise<void>;
+  deleteFixedExpense: (id: string) => Promise<boolean>;
+
+  // Financial Reports
+  fetchProfitLossReport: (outletId?: string, startDate?: string, endDate?: string) => Promise<any>;
+
+  // Security & Settings
+  updatePin: (newPin: string) => Promise<boolean>;
+
+  // Subscription & Billing
+  billingStatus: BillingStatus | null;
+  fetchBillingStatus: () => Promise<void>;
+  createCheckout: (params: {
+    type: 'ADD_OUTLET' | 'ADD_TX_QUOTA' | 'RENEWAL' | 'CHANGE_PLAN' | 'UPGRADE_PLAN';
+    quantity?: number;
+    extraTxQuota?: number;
+    months?: number;
+    targetPlan?: string;
+    targetOutletId?: string;
+    targetOutletIds?: string[];
+  }) => Promise<any>;
+  submitManualPayment: (data: {
+    invoiceId?: string;
+    type?: 'ADD_OUTLET' | 'ADD_TX_QUOTA' | 'RENEWAL' | 'CHANGE_PLAN' | 'UPGRADE_PLAN';
+    quantity?: number;
+    extraTxQuota?: number;
+    months?: number;
+    targetPlan?: string;
+    targetOutletId?: string;
+    targetOutletIds?: string[];
+    senderName: string;
+    senderBank?: string;
+    proofImage: string;
+    notes?: string;
+  }) => Promise<any>;
+  fetchBillingInvoices: () => Promise<SubscriptionInvoice[]>;
+
+  // Dompet & Penarikan Saldo Tenant (Merchant Wallet & Payout)
+  walletSummary: WalletSummary | null;
+  isLoadingWallet: boolean;
+  fetchWalletSummary: () => Promise<void>;
+  requestWithdrawal: (data: {
+    amount: number;
+    bankName: string;
+    bankAccountNumber: string;
+    bankAccountName: string;
+    notes?: string;
+  }) => Promise<boolean>;
+  updateBankAccount: (data: {
+    bankName: string;
+    bankAccountNumber: string;
+    bankAccountName: string;
+  }) => Promise<boolean>;
+
+  // Duitku & Multi-Tenant Payment Gateway
+  createDuitkuSubscriptionCheckout: (payload: any) => Promise<any>;
+  createDuitkuPosQr: (payload: any) => Promise<any>;
+  checkDuitkuStatus: (orderId: string) => Promise<any>;
+  getPaymentGatewayConfig: () => Promise<any>;
+  updatePaymentGatewayConfig: (payload: any) => Promise<any>;
+  testPaymentGatewayConfig: (payload: any) => Promise<any>;
+
+  // Refresh helper
+  refreshData: () => Promise<void>;
+}
+
+
+const DEFAULT_USER: User = {
+  id: '',
+  name: '',
+  role: 'KASIR',
+  outletName: '',
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+};
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // 1. Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return Boolean(getAuthToken() && localStorage.getItem('dimsum_current_user'));
+  });
+
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const saved = localStorage.getItem('dimsum_current_user');
+    return saved ? JSON.parse(saved) : DEFAULT_USER;
+  });
+
+  const [selectedOutletId, setSelectedOutletIdState] = useState<string>(() => {
+    return localStorage.getItem('dimsum_outlet_id') || 'all';
+  });
+
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
+  const [menuRecipes, setMenuRecipes] = useState<MenuRecipeItem[]>([]);
+  const [opnameAuditLogs, setOpnameAuditLogs] = useState<ShiftMaterialOpnameAudit[]>([]);
+  const [currentView, setCurrentViewState] = useState<AppView>(() => {
+    if (typeof window !== 'undefined') {
+      const parsed = parsePathToRoute(window.location.pathname, []);
+      return parsed.view || 'dashboard-utama';
+    }
+    return 'dashboard-utama';
+  });
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [notification, setNotification] = useState<NotificationState | null>(null);
+
+  // Multi-Tenant State
+  const [currentTenant, setCurrentTenant] = useState<TenantInfo | null>(null);
+
+  const applyTenantTheme = useCallback((tenant: TenantInfo | null) => {
+    if (typeof document === 'undefined') return;
+    const config = tenant?.themeConfig || {};
+    const brandColor = config.primaryColor || tenant?.themeColor || config.customColor || config.namedColors?.primary || '#ea580c';
+    const secondaryColor = config.secondaryColor || config.namedColors?.secondary || config.overrideSecondaryColor || '#475569';
+    const surfaceColor = config.surfaceColor || config.namedColors?.surface || '#ffffff';
+    const accentColor = config.accentColor || config.namedColors?.accent || '#10b981';
+
+    document.documentElement.style.setProperty('--brand-primary', brandColor);
+    document.documentElement.style.setProperty('--brand-secondary', secondaryColor);
+    document.documentElement.style.setProperty('--brand-surface', surfaceColor);
+    document.documentElement.style.setProperty('--brand-accent', accentColor);
+
+    if (config.fontFamily) {
+      document.documentElement.style.setProperty('--font-primary', config.fontFamily);
+    }
+    if (config.headlineFont) {
+      document.documentElement.style.setProperty('--font-headline', config.headlineFont);
+    }
+    if (config.bodyFont) {
+      document.documentElement.style.setProperty('--font-body', config.bodyFont);
+    }
+
+    if (tenant?.name) {
+      document.title = `${tenant.name} - Cloud POS & Accounting`;
+    }
+  }, []);
+
+  const loadTenantMeta = useCallback(async (slugOrDomain?: string): Promise<TenantInfo | null> => {
+    try {
+      const slug = slugOrDomain || getTenantSlug() || undefined;
+      const res = await api.get<{ success: boolean; tenant: TenantInfo }>(
+        `/public/tenant-meta${slug ? `?slug=${encodeURIComponent(slug)}` : ''}`
+      ).catch(() => null);
+
+      if (res?.success && res.tenant) {
+        setCurrentTenant(res.tenant);
+        applyTenantTheme(res.tenant);
+        return res.tenant;
+      }
+    } catch (e) {
+      console.warn('[Tenant Meta Fetch Error]', e);
+    }
+    return null;
+  }, [applyTenantTheme]);
+
+  // 2. Domain Data from Backend
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeShift, setActiveShift] = useState<ShiftSession | null>(null);
+  const [shiftHistory, setShiftHistory] = useState<ShiftSession[]>([]);
+  const [pettyCashList, setPettyCashList] = useState<PettyCashExpense[]>([]);
+  const [factoryInvoices, setFactoryInvoices] = useState<FactoryInvoice[]>([]);
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
+  const [staffList, setStaffList] = useState<User[]>([]);
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
+
+  // 3. Cart State
+  const [cart, setCart] = useState<OrderCartItem[]>([]);
+  const [orderType, setOrderType] = useState<OrderType>('takeaway');
+  const [tableNumber, setTableNumber] = useState('');
+  const [customerName, setCustomerName] = useState('');
+
+  // Notifications Helper
+  const showNotification = (message: string, type: NotificationState['type'] = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setNotification({ id, message, type });
+    setTimeout(() => {
+      setNotification((prev) => (prev?.id === id ? null : prev));
+    }, 4000);
+  };
+
+  // Persist Current User & Selected Outlet
+  useEffect(() => {
+    if (isAuthenticated) {
+      localStorage.setItem('dimsum_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('dimsum_current_user');
+    }
+  }, [currentUser, isAuthenticated]);
+
+  useEffect(() => {
+    localStorage.setItem('dimsum_outlet_id', selectedOutletId);
+  }, [selectedOutletId]);
+
+  // Fetch Shift History
+  const fetchShiftHistory = useCallback(async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: ShiftSession[] }>('/shifts/history').catch(() => null);
+      if (res?.success && Array.isArray(res.data)) {
+        setShiftHistory(res.data);
+      }
+    } catch (err) {
+      console.warn('[Shift History Fetch Error]', err);
+    }
+  }, []);
+
+  // Fetch Staff / Users List
+  const fetchStaffList = useCallback(async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: User[] }>('/users').catch(() => null);
+      if (res?.success && Array.isArray(res.data)) {
+        setStaffList(res.data);
+      }
+    } catch (err) {
+      console.warn('[Staff Fetch Error]', err);
+    }
+  }, []);
+
+  // Fetch Billing Status
+  const fetchBillingStatus = useCallback(async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: BillingStatus }>('/billing/status');
+      if (res.success && res.data) {
+        setBillingStatus(res.data);
+      }
+    } catch (err) {
+      console.warn('[Billing Status Fetch Warn]', err);
+    }
+  }, []);
+
+  // Initial Fetch & Refresh from Backend API
+  const refreshData = useCallback(async () => {
+    try {
+      // 1. Fetch Outlets
+      const outletRes = await api.get<{ success: boolean; data: Outlet[] }>('/outlets').catch(() => null);
+      if (outletRes?.success && Array.isArray(outletRes.data)) {
+        setOutlets(outletRes.data);
+      }
+
+      // 2. Fetch Menus
+      const menuRes = await api.get<{ success: boolean; data: MenuItem[] }>('/menus').catch(() => null);
+      if (menuRes?.success && Array.isArray(menuRes.data)) {
+        setMenuItems(menuRes.data);
+      }
+
+      // 3. Fetch Orders
+      const orderRes = await api.get<{ success: boolean; data: Order[] }>('/pos/orders').catch(() => null);
+      if (orderRes?.success && Array.isArray(orderRes.data)) {
+        setOrders(orderRes.data);
+      }
+
+      // 4. Fetch Active Shift
+      const shiftRes = await api.get<{ success: boolean; data: ShiftSession | null }>('/shifts/current').catch(() => null);
+      if (shiftRes?.success) {
+        setActiveShift(shiftRes.data);
+      }
+
+      // 5. Fetch Shift History
+      await fetchShiftHistory();
+
+      // 6. Fetch Petty Cash
+      const pcRes = await api.get<{ success: boolean; data: PettyCashExpense[] }>('/petty-cash').catch(() => null);
+      if (pcRes?.success && Array.isArray(pcRes.data)) {
+        setPettyCashList(pcRes.data);
+      }
+
+      // 7. Fetch Factory Invoices
+      const invRes = await api.get<{ success: boolean; data: FactoryInvoice[] }>('/factory-invoices').catch(() => null);
+      if (invRes?.success && Array.isArray(invRes.data)) {
+        setFactoryInvoices(invRes.data);
+      }
+
+      // 8. Fetch Fixed Expenses
+      const expRes = await api.get<{ success: boolean; data: FixedExpense[] }>('/fixed-expenses').catch(() => null);
+      if (expRes?.success && Array.isArray(expRes.data)) {
+        setFixedExpenses(expRes.data);
+      }
+
+      // 9. Fetch Staff List (if authenticated)
+      await fetchStaffList();
+
+      // 10. Fetch Billing Status
+      await fetchBillingStatus();
+
+      // 11. Fetch Raw Materials & Recipes
+      await fetchRawMaterials();
+      await fetchMenuRecipes();
+    } catch (err: any) {
+      console.warn('[Data Fetch Error]', err);
+    }
+  }, [fetchShiftHistory, fetchStaffList, fetchBillingStatus]);
+
+  const switchTenantView = useCallback(async (tenantId: string | null, tenantSlug?: string | null) => {
+    if (tenantId) {
+      setActiveTenantId(tenantId);
+      if (tenantSlug) setTenantSlug(tenantSlug);
+    } else {
+      clearActiveTenantId();
+      clearTenantSlug();
+    }
+    await loadTenantMeta(tenantSlug || undefined);
+    await refreshData();
+    showNotification(
+      tenantId ? `Beralih ke konteks tenant: ${tenantSlug || tenantId}` : 'Kembali ke platform Superadmin global',
+      'info'
+    );
+  }, [loadTenantMeta, refreshData]);
+
+  // Auto-sync offline orders when network connection resumes
+  useEffect(() => {
+    const handleOnlineSync = async () => {
+      const raw = localStorage.getItem('dimsum_offline_orders');
+      if (!raw) return;
+      try {
+        const queued: any[] = JSON.parse(raw);
+        if (Array.isArray(queued) && queued.length > 0) {
+          showNotification(`Menyinkronkan ${queued.length} transaksi offline ke server...`, 'info');
+          let successCount = 0;
+          for (const payload of queued) {
+            const res = await api.post<{ success: boolean }>('/pos/orders', payload).catch(() => null);
+            if (res?.success) successCount++;
+          }
+          localStorage.removeItem('dimsum_offline_orders');
+          showNotification(`Sinkronisasi selesai! ${successCount} transaksi offline berhasil masuk server.`, 'success');
+          await refreshData();
+        }
+      } catch (err) {
+        console.warn('[Sync Error]', err);
+      }
+    };
+
+    window.addEventListener('online', handleOnlineSync);
+    return () => window.removeEventListener('online', handleOnlineSync);
+  }, [refreshData]);
+
+  // Full Login Method
+  const applyAuthenticatedSession = async (token: string, u: User) => {
+    setAuthToken(token);
+    setIsAuthenticated(true);
+    const avatarMap: Record<string, string> = {
+      OWNER: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+      SUPERVISOR: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      KASIR: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+      AKUNTAN: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+      INVENTORY: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+    };
+    const updatedUser: User = {
+      id: u.id,
+      name: u.name,
+      username: u.username,
+      role: u.role,
+      outletId: u.outletId,
+      outletName: u.outletName,
+      tenantId: u.tenantId,
+      tenant: u.tenant,
+      avatar: avatarMap[u.role] || avatarMap.OWNER,
+    };
+    setCurrentUser(updatedUser);
+
+    if (u.tenant) {
+      setCurrentTenant(u.tenant);
+      applyTenantTheme(u.tenant);
+      setTenantSlug(u.tenant.slug);
+    }
+
+    if (u.role === 'KASIR') {
+      setSelectedOutletIdState(u.outletId || (outlets[0]?.id ?? 'all'));
+      setCurrentView('transaksi-kasir-pos');
+    } else if (u.role === 'SUPERVISOR') {
+      setSelectedOutletIdState(u.outletId || (outlets[0]?.id ?? 'all'));
+      setCurrentView('dashboard-utama');
+    } else {
+      setSelectedOutletIdState('all');
+      setCurrentView('dashboard-utama');
+    }
+
+    showNotification(`Selamat datang, ${u.name}! Berhasil masuk sebagai ${u.role}.`, 'success');
+    await refreshData();
+  };
+
+  const login = async (username: string, password?: string): Promise<boolean> => {
+    try {
+      if (!username || !password) {
+        showNotification('Username dan password wajib diisi!', 'warning');
+        return false;
+      }
+
+      const res = await api.post<{
+        success: boolean;
+        message: string;
+        token: string;
+        user: User;
+      }>('/auth/login', { username, password });
+
+      if (res.success && res.token) {
+        await applyAuthenticatedSession(res.token, res.user);
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal masuk: ${err.message || 'Kredensial salah'}`, 'error');
+    }
+    return false;
+  };
+
+  const loginWithGoogle = async (credential: string): Promise<{ ok: boolean; message?: string }> => {
+    try {
+      const res = await api.post<{
+        success: boolean;
+        message: string;
+        token: string;
+        user: User;
+      }>('/auth/google', { credential });
+
+      if (res.success && res.token) {
+        await applyAuthenticatedSession(res.token, res.user);
+        return { ok: true };
+      }
+      return { ok: false, message: res.message || 'Login Google gagal.' };
+    } catch (err: any) {
+      const msg = err?.message || 'Akun Google tidak terdaftar atau gagal verifikasi.';
+      showNotification(msg, 'error');
+      return { ok: false, message: msg };
+    }
+  };
+
+  const loginWithToken = async (token: string): Promise<boolean> => {
+    try {
+      setAuthToken(token);
+      const res = await api.get<{ success: boolean; user?: User; data?: User }>('/auth/me');
+      const userObj = res.user || res.data;
+      if (res.success && userObj) {
+        await applyAuthenticatedSession(token, userObj);
+        return true;
+      }
+      clearAuthToken();
+      showNotification('Gagal memuat profil akun Google.', 'error');
+    } catch (err: any) {
+      clearAuthToken();
+      showNotification(err?.message || 'Gagal memverifikasi sesi Google.', 'error');
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleToken = params.get('google_token');
+    if (googleToken) {
+      params.delete('google_token');
+      const cleanUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+      window.history.replaceState({}, '', cleanUrl);
+      loginWithToken(googleToken);
+    }
+  }, []);
+
+  // Logout Method
+  const logout = () => {
+    clearAuthToken();
+    clearActiveTenantId();
+    setIsAuthenticated(false);
+    localStorage.removeItem('dimsum_current_user');
+    localStorage.removeItem('dimsum_outlet_id');
+    showNotification('Anda telah berhasil keluar dari sistem.', 'info');
+  };
+
+  // Switch Role Guide
+  const switchRole = async (_role: UserRole) => {
+    showNotification('Silakan logout terlebih dahulu dan masuk dengan kredensial akun yang sesuai.', 'info');
+  };
+
+  // Public Outlets Preload (for Login Page & Selectors)
+  useEffect(() => {
+    api.get<{ success: boolean; data: Outlet[] }>('/outlets')
+      .then((res) => {
+        if (res?.success && Array.isArray(res.data)) {
+          setOutlets(res.data);
+        }
+      })
+      .catch(() => null);
+  }, []);
+
+  // Mount Effect: Authenticate, Load Tenant Meta & Load Data
+  useEffect(() => {
+    loadTenantMeta();
+    if (isAuthenticated) {
+      api.get<{ success: boolean; user: User }>('/auth/me')
+        .then((res) => {
+          if (res?.success && res.user) {
+            const u = res.user;
+            setCurrentUser((prev) => ({
+              ...prev,
+              ...u,
+            }));
+            if (u.tenant) {
+              setCurrentTenant(u.tenant);
+              applyTenantTheme(u.tenant);
+            }
+          }
+        })
+        .catch(() => null);
+      refreshData();
+    }
+  }, [isAuthenticated, loadTenantMeta, refreshData, applyTenantTheme]);
+
+
+  const setCurrentView = useCallback(
+    (view: AppView) => {
+      setCurrentViewState(view);
+      if (typeof window !== 'undefined') {
+        const newPath = buildCanonicalPath(view, selectedOutletId, outlets);
+        if (window.location.pathname !== newPath) {
+          window.history.pushState({ view, outletId: selectedOutletId }, '', newPath);
+        }
+        document.title = `Dimsum Intan - ${VIEW_TITLES[view] || 'Cloud POS'}`;
+      }
+    },
+    [selectedOutletId, outlets]
+  );
+
+  const setSelectedOutletId = useCallback(
+    (id: string) => {
+      if (currentUser.role === 'KASIR' && currentUser.outletId && id !== currentUser.outletId) {
+        showNotification('Akun Kasir terkunci hanya untuk outlet yang ditugaskan!', 'warning');
+        return;
+      }
+      setSelectedOutletIdState(id);
+      if (typeof window !== 'undefined') {
+        const newPath = buildCanonicalPath(currentView, id, outlets);
+        if (window.location.pathname !== newPath) {
+          window.history.pushState({ view: currentView, outletId: id }, '', newPath);
+        }
+      }
+    },
+    [currentUser, currentView, outlets, showNotification]
+  );
+
+  // Synchronize URL routing on Browser Back/Forward navigation
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handlePopState = () => {
+      const parsed = parsePathToRoute(window.location.pathname, outlets);
+      if (parsed.view) {
+        setCurrentViewState(parsed.view);
+        document.title = `Dimsum Intan - ${VIEW_TITLES[parsed.view] || 'Cloud POS'}`;
+      }
+      if (parsed.matchedOutletId && parsed.matchedOutletId !== selectedOutletId) {
+        setSelectedOutletIdState(parsed.matchedOutletId);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [outlets, selectedOutletId]);
+
+  // Synchronize outlet and initial path when outlets load
+  useEffect(() => {
+    if (typeof window === 'undefined' || outlets.length === 0) return;
+    const parsed = parsePathToRoute(window.location.pathname, outlets);
+    if (parsed.matchedOutletId && parsed.matchedOutletId !== selectedOutletId) {
+      setSelectedOutletIdState(parsed.matchedOutletId);
+    }
+    if (parsed.view && parsed.view !== currentView) {
+      setCurrentViewState(parsed.view);
+    }
+    if (window.location.pathname !== '/') {
+      const canonical = buildCanonicalPath(
+        parsed.view || currentView,
+        parsed.matchedOutletId || selectedOutletId,
+        outlets
+      );
+      if (window.location.pathname !== canonical) {
+        window.history.replaceState(
+          { view: parsed.view || currentView, outletId: parsed.matchedOutletId || selectedOutletId },
+          '',
+          canonical
+        );
+      }
+    }
+  }, [outlets]);
+
+  const getActiveOutlet = (): Outlet | undefined => {
+    if (outlets.length === 0 || selectedOutletId === 'all') return undefined;
+    return outlets.find((o) => o.id === selectedOutletId);
+  };
+
+  const createOutlet = async (data: Omit<Outlet, 'id'>): Promise<boolean> => {
+    try {
+      const res = await api.post<{ success: boolean; message: string; data: Outlet }>('/outlets', data);
+      if (res.success && res.data) {
+        setOutlets((prev) => [...prev, res.data]);
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal menambahkan cabang: ${err.message}`, 'error');
+    }
+    return false;
+  };
+
+  const updateOutlet = async (id: string, data: Partial<Outlet>): Promise<boolean> => {
+    try {
+      const res = await api.put<{ success: boolean; message: string; data: Outlet }>(`/outlets/${id}`, data);
+      if (res.success && res.data) {
+        setOutlets((prev) => prev.map((o) => (o.id === id ? res.data : o)));
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal memperbarui cabang: ${err.message}`, 'error');
+    }
+    return false;
+  };
+
+  const deleteOutlet = async (id: string): Promise<boolean> => {
+    try {
+      const res = await api.delete<{ success: boolean; message: string }>(`/outlets/${id}`);
+      if (res.success) {
+        setOutlets((prev) => prev.filter((o) => o.id !== id));
+        if (selectedOutletId === id) {
+          setSelectedOutletIdState('all');
+        }
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal menghapus cabang: ${err.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Staff / User Management Methods
+  const createStaffUser = async (data: {
+    name: string;
+    username: string;
+    password: string;
+    role: UserRole;
+    outletId?: string;
+    pin?: string;
+  }): Promise<boolean> => {
+    try {
+      const res = await api.post<{ success: boolean; message: string; data: User }>('/users', data);
+      if (res.success && res.data) {
+        setStaffList((prev) => [...prev, res.data]);
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal mendaftarkan akun staf: ${err.message}`, 'error');
+    }
+    return false;
+  };
+
+  const updateStaffUser = async (
+    id: string,
+    data: {
+      name: string;
+      username: string;
+      password?: string;
+      role: UserRole;
+      outletId?: string;
+      pin?: string;
+    }
+  ): Promise<boolean> => {
+    try {
+      const res = await api.put<{ success: boolean; message: string; data: User }>(`/users/${id}`, data);
+      if (res.success && res.data) {
+        setStaffList((prev) => prev.map((u) => (u.id === id ? { ...u, ...res.data } : u)));
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal memperbarui akun staf: ${err.message}`, 'error');
+    }
+    return false;
+  };
+
+  const updateOwnProfile = async (data: {
+    name: string;
+    username: string;
+    password?: string;
+  }): Promise<boolean> => {
+    try {
+      const res = await api.put<{ success: boolean; message: string; data: User }>('/auth/me', data);
+      if (res.success && res.data) {
+        setCurrentUser((prev) => ({ ...prev, ...res.data }));
+        setStaffList((prev) => prev.map((u) => (u.id === res.data.id ? { ...u, ...res.data } : u)));
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal memperbarui informasi akun: ${err.message}`, 'error');
+    }
+    return false;
+  };
+
+  const deleteStaffUser = async (id: string): Promise<boolean> => {
+    try {
+      const res = await api.delete<{ success: boolean; message: string }>(`/users/${id}`);
+      if (res.success) {
+        setStaffList((prev) => prev.filter((u) => u.id !== id));
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal menghapus akun staf: ${err.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Supervisor PIN Validation
+  const verifyPin = (_pin: string): boolean => {
+    return true; // PIN diperiksa langsung oleh backend bcrypt
+  };
+
+  // Cart Management
+  const addToCart = (menu: MenuItem) => {
+    if (!menu.isAvailable || menu.stock <= 0) {
+      showNotification(`Maaf, ${menu.name} sedang habis!`, 'warning');
+      return;
+    }
+
+    setCart((prev) => {
+      const existing = prev.find((item) => item.menuId === menu.id);
+      if (existing) {
+        if (existing.quantity >= menu.stock) {
+          showNotification(`Stok tersisa hanya ${menu.stock} porsi`, 'warning');
+          return prev;
+        }
+        return prev.map((item) =>
+          item.menuId === menu.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          menuId: menu.id,
+          name: menu.name,
+          price: menu.price,
+          costPrice: menu.costPrice,
+          quantity: 1,
+          notes: '',
+        },
+      ];
+    });
+  };
+
+  const updateCartQty = (menuId: string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if (item.menuId === menuId) {
+            const nextQty = item.quantity + delta;
+            return nextQty > 0 ? { ...item, quantity: nextQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as OrderCartItem[]
+    );
+  };
+
+  const updateCartNotes = (menuId: string, notes: string) => {
+    setCart((prev) =>
+      prev.map((item) => (item.menuId === menuId ? { ...item, notes } : item))
+    );
+  };
+
+  const removeFromCart = (menuId: string) => {
+    setCart((prev) => prev.filter((item) => item.menuId !== menuId));
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    setCustomerName('');
+  };
+
+  // Process Checkout via Backend API
+  const processCheckout = async (
+    paymentMethod: PaymentMethod,
+    cashReceived: number = 0,
+    discount: number = 0
+  ): Promise<Order | null> => {
+    const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const finalTotal = Math.max(0, subtotal - discount);
+    const hppTotal = cart.reduce((sum, item) => sum + item.costPrice * item.quantity, 0);
+    const changeAmount = paymentMethod === 'CASH' ? Math.max(0, cashReceived - finalTotal) : 0;
+
+    const currentOutlet = getActiveOutlet() || outlets[0];
+    const targetOutletId = currentOutlet ? currentOutlet.id : '';
+
+    try {
+      const payload = {
+        outletId: targetOutletId,
+        orderType: 'takeaway' as OrderType,
+        tableNumber: undefined,
+        customerName: customerName || 'Pelanggan Takeaway',
+        items: cart,
+        subtotal,
+        discount,
+        total: finalTotal,
+        hppTotal,
+        paymentMethod,
+        cashReceived: paymentMethod === 'CASH' ? cashReceived : finalTotal,
+        changeAmount,
+      };
+
+      // Check Offline Resilience: Jika navigator offline, simpan ke antrean lokal
+      if (!navigator.onLine) {
+        const offlineId = `offline-${Date.now()}`;
+        const offlineInvoiceNumber = `INV-OFF/${new Date().toISOString().slice(0, 10).replace(/-/g, '')}/${Math.floor(100 + Math.random() * 900)}`;
+        const offlineOrder: Order = {
+          id: offlineId,
+          invoiceNumber: offlineInvoiceNumber,
+          outletId: targetOutletId,
+          outletName: currentOutlet?.name || 'Cabang POS',
+          orderType: 'takeaway',
+          customerName: customerName || 'Pelanggan Takeaway',
+          subtotal,
+          discount,
+          total: finalTotal,
+          hppTotal,
+          paymentMethod,
+          cashReceived: paymentMethod === 'CASH' ? cashReceived : finalTotal,
+          changeAmount,
+          cashierName: currentUser.name,
+          status: 'PAID',
+          createdAt: new Date().toISOString(),
+          items: cart.map((c) => ({
+            menuId: c.menuId,
+            name: c.name,
+            price: c.price,
+            costPrice: c.costPrice,
+            quantity: c.quantity,
+            notes: c.notes,
+          })),
+        };
+
+        const existingOffline = JSON.parse(localStorage.getItem('dimsum_offline_orders') || '[]');
+        existingOffline.push(payload);
+        localStorage.setItem('dimsum_offline_orders', JSON.stringify(existingOffline));
+
+        setOrders((prev) => [offlineOrder, ...prev]);
+
+        // Deduct local stock
+        setMenuItems((prev) =>
+          prev.map((menu) => {
+            const cartItem = cart.find((c) => c.menuId === menu.id);
+            if (cartItem) {
+              const newStock = Math.max(0, menu.stock - cartItem.quantity);
+              return { ...menu, stock: newStock, isAvailable: newStock > 0 };
+            }
+            return menu;
+          })
+        );
+
+        clearCart();
+        showNotification(
+          `[MODE OFFLINE] Transaksi ${offlineInvoiceNumber} disimpan di laci lokal & siap dicetak. Akan otomatis disinkronkan saat online!`,
+          'warning'
+        );
+        return offlineOrder;
+      }
+
+      const res = await api.post<{ success: boolean; message: string; data: Order }>('/pos/orders', payload);
+
+      if (res.success && res.data) {
+        const created = res.data;
+        setOrders((prev) => [created, ...prev]);
+
+        // Deduct local stock
+        setMenuItems((prev) =>
+          prev.map((menu) => {
+            const cartItem = cart.find((c) => c.menuId === menu.id);
+            if (cartItem) {
+              const newStock = Math.max(0, menu.stock - cartItem.quantity);
+              return { ...menu, stock: newStock, isAvailable: newStock > 0 };
+            }
+            return menu;
+          })
+        );
+
+        // Update active shift if any
+        if (activeShift) {
+          const addCash = paymentMethod === 'CASH' ? finalTotal : 0;
+          const addQris = paymentMethod === 'QRIS' ? finalTotal : 0;
+          setActiveShift((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  cashSales: prev.cashSales + addCash,
+                  qrisSales: prev.qrisSales + addQris,
+                  expectedCash: prev.expectedCash + addCash,
+                }
+              : null
+          );
+        }
+
+        clearCart();
+        showNotification(`Transaksi ${created.invoiceNumber} berhasil diselesaikan!`, 'success');
+        return created;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal memproses transaksi: ${error.message}`, 'error');
+    }
+    return null;
+  };
+
+  // Void Order via Backend API (Supervisor PIN)
+  const voidOrder = async (orderId: string, reason: string, supervisorPin: string): Promise<boolean> => {
+    try {
+      const res = await api.post<{ success: boolean; message: string }>(
+        `/pos/orders/${orderId}/void`,
+        { pin: supervisorPin, reason }
+      );
+
+      if (res.success) {
+        showNotification(res.message, 'info');
+        await refreshData();
+        return true;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal membatalkan transaksi: ${error.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Shift Actions via Backend API
+  const openShift = async (startingCash: number) => {
+    const currentOutlet = getActiveOutlet() || outlets[0];
+    const targetOutletId = currentOutlet ? currentOutlet.id : '';
+
+    try {
+      const res = await api.post<{ success: boolean; message: string; data: ShiftSession }>(
+        '/shifts/open',
+        { outletId: targetOutletId, startingCash }
+      );
+
+      if (res.success && res.data) {
+        setActiveShift(res.data);
+        showNotification(res.message, 'success');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal membuka shift: ${error.message}`, 'error');
+    }
+  };
+
+  const fetchRawMaterials = async () => {
+    try {
+      const q = selectedOutletId && selectedOutletId !== 'all' ? `?outletId=${selectedOutletId}` : '';
+      const res = await api.get<{ success: boolean; data: RawMaterial[] }>(`/materials${q}`).catch(() => null);
+      if (res?.success && Array.isArray(res.data)) {
+        setRawMaterials(res.data);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const createRawMaterial = async (payload: Omit<RawMaterial, 'id'>): Promise<boolean> => {
+    try {
+      const res = await api.post<{ success: boolean; message: string; data: RawMaterial }>('/materials', payload);
+      if (res.success) {
+        showNotification(res.message, 'success');
+        await fetchRawMaterials();
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      showNotification(`Gagal menambah bahan baku: ${error.message}`, 'error');
+      return false;
+    }
+  };
+
+  const updateRawMaterial = async (
+    id: string,
+    payload: Partial<RawMaterial> & { addStock?: number }
+  ): Promise<boolean> => {
+    try {
+      const res = await api.put<{ success: boolean; message: string }>(`/materials/${id}`, payload);
+      if (res.success) {
+        showNotification(res.message, 'success');
+        await fetchRawMaterials();
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      showNotification(`Gagal memperbarui bahan baku: ${error.message}`, 'error');
+      return false;
+    }
+  };
+
+  const deleteRawMaterial = async (id: string): Promise<boolean> => {
+    try {
+      const res = await api.delete<{ success: boolean; message: string }>(`/materials/${id}`);
+      if (res.success) {
+        showNotification(res.message, 'success');
+        await fetchRawMaterials();
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      showNotification(`Gagal menghapus bahan baku: ${error.message}`, 'error');
+      return false;
+    }
+  };
+
+  const fetchMenuRecipes = async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: MenuRecipeItem[] }>('/recipes').catch(() => null);
+      if (res?.success && Array.isArray(res.data)) {
+        setMenuRecipes(res.data);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const saveMenuRecipe = async (
+    menuId: string,
+    items: Array<{ rawMaterialId: string; quantityUsed: number }>
+  ): Promise<boolean> => {
+    try {
+      const res = await api.put<{ success: boolean; message: string }>(`/recipes/${menuId}`, { items });
+      if (res.success) {
+        showNotification(res.message, 'success');
+        await fetchMenuRecipes();
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      showNotification(`Gagal menyimpan resep: ${error.message}`, 'error');
+      return false;
+    }
+  };
+
+  const fetchOpnameAudit = async (shiftId?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (shiftId) params.set('shiftId', shiftId);
+      else if (selectedOutletId && selectedOutletId !== 'all') params.set('outletId', selectedOutletId);
+      const q = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get<{ success: boolean; data: ShiftMaterialOpnameAudit[] }>(`/shifts/opname-audit${q}`).catch(() => null);
+      if (res?.success && Array.isArray(res.data)) {
+        setOpnameAuditLogs(res.data);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const closeShift = async (
+    actualEndingCash: number,
+    notes?: string,
+    materialOpnames?: ShiftMaterialOpnameInput[]
+  ) => {
+    try {
+      const res = await api.post<{ success: boolean; message: string; data: ShiftSession }>(
+        '/shifts/close',
+        {
+          actualEndingCash,
+          notes,
+          shiftId: activeShift?.id,
+          outletId: selectedOutletId === 'all' ? (currentUser?.outletId || activeShift?.outletId) : selectedOutletId,
+          ...(materialOpnames && materialOpnames.length > 0 ? { materialOpnames } : {}),
+        }
+      );
+
+      if (res.success && res.data) {
+        setActiveShift(res.data);
+        showNotification(res.message, 'success');
+        await fetchShiftHistory();
+        await fetchRawMaterials();
+        if (currentUser?.role !== 'KASIR') {
+          await fetchOpnameAudit();
+        }
+      }
+    } catch (error: any) {
+      showNotification(`Gagal menutup shift: ${error.message}`, 'error');
+    }
+  };
+
+  // Petty Cash Actions via Backend API
+  const addPettyCash = async (
+    amount: number,
+    category: PettyCashExpense['category'],
+    description: string,
+    receiptImage?: File | string | null
+  ): Promise<boolean> => {
+    const currentOutlet = getActiveOutlet() || outlets[0];
+    const targetOutletId = currentOutlet ? currentOutlet.id : '';
+
+    try {
+      let res: { success: boolean; message: string; data: PettyCashExpense };
+      const savedMaxLimit = localStorage.getItem('dimsum_petty_cash_max_limit') || '150000';
+      if (typeof File !== 'undefined' && receiptImage instanceof File) {
+        const formData = new FormData();
+        formData.append('outletId', targetOutletId);
+        formData.append('amount', String(amount));
+        formData.append('category', category);
+        formData.append('description', description);
+        formData.append('receipt', receiptImage);
+        formData.append('maxLimit', savedMaxLimit);
+        res = await api.postForm<{ success: boolean; message: string; data: PettyCashExpense }>(
+          '/petty-cash',
+          formData
+        );
+      } else {
+        res = await api.post<{ success: boolean; message: string; data: PettyCashExpense }>(
+          '/petty-cash',
+          {
+            outletId: targetOutletId,
+            amount,
+            category,
+            description,
+            receiptImageUrl: typeof receiptImage === 'string' ? receiptImage : undefined,
+            maxLimit: savedMaxLimit,
+          }
+        );
+      }
+
+      if (res.success && res.data) {
+        setPettyCashList((prev) => [res.data, ...prev]);
+        showNotification(res.message, 'success');
+        if (activeShift) {
+          setActiveShift((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  pettyCashOut: prev.pettyCashOut + amount,
+                  expectedCash: prev.expectedCash - amount,
+                }
+              : null
+          );
+        }
+        return true;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal mencatat kas kecil: ${error.message}`, 'error');
+    }
+    return false;
+  };
+
+  const verifyPettyCash = async (id: string, status: 'DISETUJUI' | 'DITOLAK') => {
+    try {
+      const res = await api.patch<{ success: boolean; message: string; data: any }>(
+        `/petty-cash/${id}/verify`,
+        { status }
+      );
+
+      if (res.success) {
+        setPettyCashList((prev) =>
+          prev.map((pc) => (pc.id === id ? { ...pc, status, verifiedBy: currentUser.name } : pc))
+        );
+        showNotification(res.message, 'info');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal verifikasi kas kecil: ${error.message}`, 'error');
+    }
+  };
+
+  const deletePettyCash = async (id: string, pin: string): Promise<boolean> => {
+    try {
+      const res = await api.delete<{ success: boolean; message: string }>(
+        `/petty-cash/${id}`,
+        { pin }
+      );
+
+      if (res.success) {
+        setPettyCashList((prev) => prev.filter((p) => p.id !== id));
+        showNotification(res.message, 'info');
+        return true;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal menghapus kas kecil: ${error.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Master Menu Actions via Backend API
+  const addMenuItem = async (menu: Omit<MenuItem, 'id' | 'code'>): Promise<MenuItem | null> => {
+    try {
+      const res = await api.post<{ success: boolean; message: string; data: MenuItem }>(
+        '/menus',
+        menu
+      );
+
+      if (res.success && res.data) {
+        setMenuItems((prev) => [res.data, ...prev]);
+        showNotification(res.message, 'success');
+        return res.data;
+      }
+      return null;
+    } catch (error: any) {
+      showNotification(`Gagal menambahkan menu: ${error.message}`, 'error');
+      return null;
+    }
+  };
+
+  const updateMenuItem = async (id: string, partial: Partial<MenuItem>) => {
+    try {
+      const res = await api.put<{ success: boolean; message: string; data: MenuItem }>(
+        `/menus/${id}`,
+        partial
+      );
+
+      if (res.success && res.data) {
+        setMenuItems((prev) => prev.map((m) => (m.id === id ? { ...m, ...res.data } : m)));
+        showNotification(res.message, 'success');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal memperbarui menu: ${error.message}`, 'error');
+    }
+  };
+
+  const deleteMenuItem = async (id: string) => {
+    try {
+      const res = await api.delete<{ success: boolean; message: string }>(`/menus/${id}`);
+
+      if (res.success) {
+        setMenuItems((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, isSoftDeleted: true, isAvailable: false } : m))
+        );
+        showNotification(res.message, 'info');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal menghapus menu: ${error.message}`, 'error');
+    }
+  };
+
+  const toggleMenuAvailability = async (id: string) => {
+    try {
+      const res = await api.patch<{ success: boolean; message: string; data: MenuItem }>(
+        `/menus/${id}/toggle`
+      );
+
+      if (res.success && res.data) {
+        setMenuItems((prev) => prev.map((m) => (m.id === id ? { ...m, isAvailable: res.data.isAvailable } : m)));
+        showNotification(res.message, 'info');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal mengubah status menu: ${error.message}`, 'error');
+    }
+  };
+
+  // Factory Invoices via Backend API
+  const addFactoryInvoice = async (invoice: Omit<FactoryInvoice, 'id' | 'invoiceNumber'>) => {
+    try {
+      const res = await api.post<{ success: boolean; message: string; data: FactoryInvoice }>(
+        '/factory-invoices',
+        invoice
+      );
+
+      if (res.success && res.data) {
+        setFactoryInvoices((prev) => [res.data, ...prev]);
+        showNotification(res.message, 'success');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal mencatat faktur pabrik: ${error.message}`, 'error');
+    }
+  };
+
+  const markInvoicePaid = async (id: string, proofImageUrl?: string) => {
+    try {
+      const res = await api.patch<{ success: boolean; message: string; data: FactoryInvoice }>(
+        `/factory-invoices/${id}/pay`,
+        { proofImageUrl }
+      );
+
+      if (res.success && res.data) {
+        setFactoryInvoices((prev) =>
+          prev.map((inv) => (inv.id === id ? { ...inv, status: 'LUNAS', paidAt: new Date().toISOString().slice(0, 10) } : inv))
+        );
+        showNotification(res.message, 'success');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal menandai faktur lunas: ${error.message}`, 'error');
+    }
+  };
+
+  // Fixed Expenses via Backend API
+  const addFixedExpense = async (expense: Omit<FixedExpense, 'id' | 'code'>) => {
+    try {
+      const res = await api.post<{ success: boolean; message: string; data: FixedExpense }>(
+        '/fixed-expenses',
+        expense
+      );
+
+      if (res.success && res.data) {
+        setFixedExpenses((prev) => [res.data, ...prev]);
+        showNotification(res.message, 'success');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal mencatat beban operasional: ${error.message}`, 'error');
+    }
+  };
+
+  const toggleFixedExpenseStatus = async (id: string) => {
+    try {
+      const res = await api.patch<{ success: boolean; message: string; data: FixedExpense }>(
+        `/fixed-expenses/${id}/status`
+      );
+
+      if (res.success && res.data) {
+        setFixedExpenses((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, status: res.data.status } : e))
+        );
+        showNotification(res.message, 'info');
+      }
+    } catch (error: any) {
+      showNotification(`Gagal mengubah status beban: ${error.message}`, 'error');
+    }
+  };
+
+  // Update Petty Cash (before verified)
+  const updatePettyCash = async (
+    id: string,
+    amount: number,
+    category: PettyCashExpense['category'],
+    description: string
+  ): Promise<boolean> => {
+    try {
+      const savedMaxLimit = localStorage.getItem('dimsum_petty_cash_max_limit') || '150000';
+      const res = await api.put<{ success: boolean; message: string; data: PettyCashExpense }>(
+        `/petty-cash/${id}`,
+        { amount, category, description, maxLimit: savedMaxLimit }
+      );
+
+      if (res.success && res.data) {
+        setPettyCashList((prev) => prev.map((p) => (p.id === id ? { ...p, ...res.data } : p)));
+        showNotification(res.message, 'success');
+        await refreshData();
+        return true;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal memperbarui kas kecil: ${error.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Update Factory Invoice
+  const updateFactoryInvoice = async (id: string, data: Partial<FactoryInvoice>): Promise<boolean> => {
+    try {
+      const res = await api.put<{ success: boolean; message: string; data: FactoryInvoice }>(
+        `/factory-invoices/${id}`,
+        data
+      );
+      if (res.success && res.data) {
+        setFactoryInvoices((prev) => prev.map((inv) => (inv.id === id ? res.data : inv)));
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal memperbarui faktur pabrik: ${error.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Delete Factory Invoice
+  const deleteFactoryInvoice = async (id: string): Promise<boolean> => {
+    try {
+      const res = await api.delete<{ success: boolean; message: string }>(`/factory-invoices/${id}`);
+      if (res.success) {
+        setFactoryInvoices((prev) => prev.filter((inv) => inv.id !== id));
+        showNotification(res.message, 'info');
+        return true;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal menghapus faktur: ${error.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Update Fixed Expense
+  const updateFixedExpense = async (id: string, partial: Partial<FixedExpense>): Promise<boolean> => {
+    try {
+      const res = await api.put<{ success: boolean; message: string; data: FixedExpense }>(
+        `/fixed-expenses/${id}`,
+        partial
+      );
+      if (res.success && res.data) {
+        setFixedExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...res.data } : e)));
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal memperbarui beban: ${error.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Delete Fixed Expense
+  const deleteFixedExpense = async (id: string): Promise<boolean> => {
+    try {
+      const res = await api.delete<{ success: boolean; message: string }>(`/fixed-expenses/${id}`);
+      if (res.success) {
+        setFixedExpenses((prev) => prev.filter((e) => e.id !== id));
+        showNotification(res.message, 'info');
+        return true;
+      }
+    } catch (error: any) {
+      showNotification(`Gagal menghapus beban: ${error.message}`, 'error');
+    }
+    return false;
+  };
+
+  // Financial Report from Backend
+  const fetchProfitLossReport = async (outletId?: string, startDate?: string, endDate?: string): Promise<any> => {
+    try {
+      const params = new URLSearchParams();
+      if (outletId && outletId !== 'all') params.append('outletId', outletId);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get<{ success: boolean; data: any }>(`/reports/profit-loss${query}`);
+      if (res.success) {
+        return res.data;
+      }
+    } catch (err: any) {
+      console.warn('[Profit Loss Fetch Error]', err);
+    }
+    return null;
+  };
+
+  // Update PIN Security
+  const updatePin = async (newPin: string): Promise<boolean> => {
+    try {
+      const res = await api.put<{ success: boolean; message: string }>('/auth/pin', { newPin });
+      if (res.success) {
+        showNotification(res.message, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      showNotification(`Gagal memperbarui PIN: ${err.message}`, 'error');
+    }
+    return false;
+  };
+
+  const createCheckout = useCallback(
+    async (params: {
+      type: 'ADD_OUTLET' | 'ADD_TX_QUOTA' | 'RENEWAL' | 'CHANGE_PLAN' | 'UPGRADE_PLAN';
+      quantity?: number;
+      extraTxQuota?: number;
+      months?: number;
+      targetPlan?: string;
+      targetOutletId?: string;
+      targetOutletIds?: string[];
+    }) => {
+      try {
+        const res = await api.post<{ success: boolean; data: any; message: string }>(
+          '/billing/checkout',
+          params
+        );
+        return res;
+      } catch (err: any) {
+        showNotification(err.message || 'Gagal membuat tagihan pembayaran', 'error');
+        throw err;
+      }
+    },
+    []
+  );
+
+  const submitManualPayment = useCallback(
+    async (data: {
+      invoiceId?: string;
+      type?: 'ADD_OUTLET' | 'ADD_TX_QUOTA' | 'RENEWAL' | 'CHANGE_PLAN' | 'UPGRADE_PLAN';
+      quantity?: number;
+      extraTxQuota?: number;
+      months?: number;
+      targetPlan?: string;
+      targetOutletId?: string;
+      targetOutletIds?: string[];
+      senderName: string;
+      senderBank?: string;
+      proofImage: string;
+      notes?: string;
+    }) => {
+      try {
+        const res = await api.post<{ success: boolean; data: any; message: string }>(
+          '/billing/manual-pay',
+          data
+        );
+        showNotification(
+          res.message || 'Bukti transfer QRIS berhasil dikirim! Menunggu persetujuan Superadmin.',
+          'success'
+        );
+        await fetchBillingStatus();
+        return res;
+      } catch (err: any) {
+        showNotification(err.message || 'Gagal mengirim bukti transfer', 'error');
+        throw err;
+      }
+    },
+    [fetchBillingStatus, showNotification]
+  );
+
+  const fetchBillingInvoices = useCallback(async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: SubscriptionInvoice[] }>('/billing/invoices');
+      return res.success && Array.isArray(res.data) ? res.data : [];
+    } catch (err) {
+      console.warn('[Billing Invoices Fetch Warn]', err);
+      return [];
+    }
+  }, []);
+
+  // Dompet Digital & Penarikan Saldo (Merchant Wallet & Payout)
+  const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
+  const [isLoadingWallet, setIsLoadingWallet] = useState<boolean>(false);
+
+  const fetchWalletSummary = useCallback(async () => {
+    setIsLoadingWallet(true);
+    try {
+      const res = await api.get<{ success: boolean; data: WalletSummary }>('/wallet/summary');
+      if (res.success && res.data) {
+        setWalletSummary(res.data);
+      }
+    } catch (err) {
+      console.warn('[Wallet Summary Fetch Error]', err);
+    } finally {
+      setIsLoadingWallet(false);
+    }
+  }, []);
+
+  const requestWithdrawal = useCallback(
+    async (data: {
+      amount: number;
+      bankName: string;
+      bankAccountNumber: string;
+      bankAccountName: string;
+      notes?: string;
+    }) => {
+      try {
+        const res = await api.post<{ success: boolean; message: string; data: any }>('/wallet/withdraw', data);
+        if (res.success) {
+          showNotification(res.message || 'Permohonan penarikan saldo berhasil diajukan!', 'success');
+          await fetchWalletSummary();
+          return true;
+        }
+      } catch (err: any) {
+        showNotification(err.message || 'Gagal mengajukan penarikan dana', 'error');
+      }
+      return false;
+    },
+    [fetchWalletSummary, showNotification]
+  );
+
+  const updateBankAccount = useCallback(
+    async (data: { bankName: string; bankAccountNumber: string; bankAccountName: string }) => {
+      try {
+        const res = await api.put<{ success: boolean; message: string }>('/wallet/bank-account', data);
+        if (res.success) {
+          showNotification(res.message || 'Rekening bank berhasil disimpan!', 'success');
+          await fetchWalletSummary();
+          return true;
+        }
+      } catch (err: any) {
+        showNotification(err.message || 'Gagal menyimpan rekening bank', 'error');
+      }
+      return false;
+    },
+    [fetchWalletSummary, showNotification]
+  );
+
+  // Duitku Payment Gateway Integration
+  const createDuitkuSubscriptionCheckout = useCallback(
+    async (payload: any) => {
+      try {
+        return await api.post<{ success: boolean; data: any; message: string }>(
+          '/payment/duitku/subscription-checkout',
+          payload
+        );
+      } catch (err: any) {
+        showNotification(err.message || 'Gagal membuat invoice Duitku', 'error');
+        throw err;
+      }
+    },
+    [showNotification]
+  );
+
+  const createDuitkuPosQr = useCallback(
+    async (payload: any) => {
+      try {
+        return await api.post<{ success: boolean; data: any; message: string }>(
+          '/payment/duitku/pos-qr',
+          payload
+        );
+      } catch (err: any) {
+        showNotification(err.message || 'Gagal membuat QRIS Duitku', 'error');
+        throw err;
+      }
+    },
+    [showNotification]
+  );
+
+  const checkDuitkuStatus = useCallback(async (orderId: string) => {
+    try {
+      return await api.get<{ success: boolean; isPaid?: boolean; status?: string }>(
+        `/payment/duitku/status/${orderId}`
+      );
+    } catch (err) {
+      return null;
+    }
+  }, []);
+
+  const getPaymentGatewayConfig = useCallback(async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: any }>('/payment/gateway/config');
+      return res.data;
+    } catch (err: any) {
+      showNotification(err.message || 'Gagal memuat konfigurasi payment gateway', 'error');
+      throw err;
+    }
+  }, [showNotification]);
+
+  const updatePaymentGatewayConfig = useCallback(
+    async (payload: any) => {
+      try {
+        const res = await api.put<{ success: boolean; message: string; provider: string }>(
+          '/payment/gateway/config',
+          payload
+        );
+        showNotification(res.message || 'Konfigurasi Payment Gateway berhasil disimpan!', 'success');
+        return res;
+      } catch (err: any) {
+        showNotification(err.message || 'Gagal menyimpan konfigurasi payment gateway', 'error');
+        throw err;
+      }
+    },
+    [showNotification]
+  );
+
+  const testPaymentGatewayConfig = useCallback(
+    async (payload: any) => {
+      try {
+        const res = await api.post<{ success: boolean; message: string }>(
+          '/payment/gateway/test',
+          payload
+        );
+        return res;
+      } catch (err: any) {
+        showNotification(err.message || 'Gagal menguji koneksi payment gateway', 'error');
+        throw err;
+      }
+    },
+    [showNotification]
+  );
+
+  return (
+    <AppContext.Provider
+      value={{
+        currentUser,
+        isAuthenticated,
+        login,
+        loginWithGoogle,
+        loginWithToken,
+        logout,
+        switchRole,
+        outlets,
+        selectedOutletId,
+        setSelectedOutletId,
+        getActiveOutlet,
+        createOutlet,
+        updateOutlet,
+        deleteOutlet,
+        currentView,
+        setCurrentView,
+        isSidebarOpen,
+        setIsSidebarOpen,
+        notification,
+        showNotification,
+        menuItems: menuItems.filter((m) => !m.isSoftDeleted),
+        cart,
+        orderType,
+        setOrderType,
+        tableNumber,
+        setTableNumber,
+        customerName,
+        setCustomerName,
+        addToCart,
+        updateCartQty,
+        updateCartNotes,
+        removeFromCart,
+        clearCart,
+        processCheckout,
+        orders,
+        voidOrder,
+        verifyPin,
+        updatePin,
+        activeShift,
+        shiftHistory,
+        openShift,
+        closeShift,
+        fetchShiftHistory,
+        rawMaterials,
+        menuRecipes,
+        opnameAuditLogs,
+        fetchRawMaterials,
+        createRawMaterial,
+        updateRawMaterial,
+        deleteRawMaterial,
+        fetchMenuRecipes,
+        saveMenuRecipe,
+        fetchOpnameAudit,
+        pettyCashList,
+        addPettyCash,
+        updatePettyCash,
+        verifyPettyCash,
+        deletePettyCash,
+        addMenuItem,
+        updateMenuItem,
+        deleteMenuItem,
+        toggleMenuAvailability,
+        factoryInvoices,
+        addFactoryInvoice,
+        updateFactoryInvoice,
+        markInvoicePaid,
+        deleteFactoryInvoice,
+        fixedExpenses,
+        addFixedExpense,
+        updateFixedExpense,
+        toggleFixedExpenseStatus,
+        deleteFixedExpense,
+        fetchProfitLossReport,
+        staffList,
+        fetchStaffList,
+        createStaffUser,
+        updateStaffUser,
+        updateOwnProfile,
+        deleteStaffUser,
+        refreshData,
+        currentTenant,
+        setCurrentTenant,
+        loadTenantMeta,
+        switchTenantView,
+        billingStatus,
+        fetchBillingStatus,
+        createCheckout,
+        submitManualPayment,
+        fetchBillingInvoices,
+        walletSummary,
+        isLoadingWallet,
+        fetchWalletSummary,
+        requestWithdrawal,
+        updateBankAccount,
+        createDuitkuSubscriptionCheckout,
+        createDuitkuPosQr,
+        checkDuitkuStatus,
+        getPaymentGatewayConfig,
+        updatePaymentGatewayConfig,
+        testPaymentGatewayConfig,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useApp = (): AppContextType => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+};

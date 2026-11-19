@@ -1,0 +1,909 @@
+import React, { useState } from 'react';
+import {
+  Wallet,
+  PlusCircle,
+  CheckCircle2,
+  XCircle,
+  Image as ImageIcon,
+  Clock,
+  ShieldCheck,
+  AlertTriangle,
+  Receipt,
+  Trash2,
+  X,
+  Upload,
+  Camera,
+  Edit2,
+  Pencil,
+} from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { PettyCashCategory, PettyCashExpense } from '../types';
+import { PinAuthorizationModal } from '../components/common/PinAuthorizationModal';
+import { CustomSelect } from '../components/common/CustomSelect';
+import { ImageUpload } from '../components/common/ImageUpload';
+import { RupiahInput } from '../components/common/RupiahInput';
+
+export const PettyCashPage: React.FC = () => {
+  const {
+    pettyCashList,
+    addPettyCash,
+    updatePettyCash,
+    verifyPettyCash,
+    deletePettyCash,
+    currentUser,
+    selectedOutletId,
+    showNotification,
+    getActiveOutlet,
+  } = useApp();
+
+  const isKasir = currentUser.role === 'KASIR';
+  const isOwner = currentUser.role === 'OWNER';
+  const isSupervisorOrOwner =
+    currentUser.role === 'SUPERVISOR' ||
+    currentUser.role === 'OWNER' ||
+    currentUser.role === 'AKUNTAN';
+
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [previewReceiptImage, setPreviewReceiptImage] = useState<string | null>(null);
+
+  // SOP Guardrail States (Persisted in localStorage)
+  const [maxLimitPerNote, setMaxLimitPerNote] = useState<number>(() => {
+    const saved = localStorage.getItem('dimsum_petty_cash_max_limit');
+    return saved ? parseInt(saved) || 150000 : 150000;
+  });
+  const [sopNote, setSopNote] = useState<string>(() => {
+    return (
+      localStorage.getItem('dimsum_petty_cash_sop_note') ||
+      'SOP Audit: Wajib foto struk nota fisik'
+    );
+  });
+
+  // Modal edit state for Limit SOP
+  const [isEditLimitModalOpen, setIsEditLimitModalOpen] = useState(false);
+  const [tempMaxLimit, setTempMaxLimit] = useState<string>(maxLimitPerNote.toString());
+  const [tempSopNote, setTempSopNote] = useState<string>(sopNote);
+
+  const [formAmount, setFormAmount] = useState('');
+  const [formCategory, setFormCategory] = useState<PettyCashCategory>('ES_BATU');
+  const [formDescription, setFormDescription] = useState('');
+  const [formReceiptUrl, setFormReceiptUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setFilePreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+  };
+
+  // Edit state (before verified)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<PettyCashExpense | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editCategory, setEditCategory] = useState<PettyCashCategory>('ES_BATU');
+  const [editDescription, setEditDescription] = useState('');
+
+  const handleOpenEdit = (item: PettyCashExpense) => {
+    setItemToEdit(item);
+    setEditAmount(item.amount.toString());
+    setEditCategory(item.category as PettyCashCategory);
+    setEditDescription(item.description);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!itemToEdit) return;
+    const amt = parseFloat(editAmount);
+    if (!amt || amt <= 0) {
+      showNotification('Nominal kas kecil tidak valid!', 'error');
+      return;
+    }
+    if (amt > maxLimitPerNote) {
+      showNotification(
+        `Batas SOP: Pengeluaran darurat maksimal Rp ${maxLimitPerNote.toLocaleString('id-ID')} per nota!`,
+        'error'
+      );
+      return;
+    }
+
+    const ok = await updatePettyCash(itemToEdit.id, amt, editCategory, editDescription);
+    if (ok) {
+      setIsEditModalOpen(false);
+      setItemToEdit(null);
+    }
+  };
+
+  // Delete authorization state
+  const [itemToDelete, setItemToDelete] = useState<PettyCashExpense | null>(null);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+
+
+  // RBAC Filter: Kasir can only see their own assigned outlet
+  const filteredList = pettyCashList.filter((item) => {
+    if (isKasir && currentUser.outletId) return item.outletId === currentUser.outletId;
+    if (selectedOutletId === 'all') return true;
+    return item.outletId === selectedOutletId;
+  });
+
+  const totalSpent = filteredList
+    .filter((p) => p.status === 'DISETUJUI')
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const todayKey = new Date().toLocaleDateString('en-CA');
+  const todayList = filteredList.filter((p) => {
+    if (p.status === 'DITOLAK') return false;
+    const itemDate = new Date(p.createdAt).toLocaleDateString('en-CA');
+    return itemDate === todayKey;
+  });
+  const todaySpent = todayList.reduce((sum, p) => sum + p.amount, 0);
+  const todayCount = todayList.length;
+
+  const pendingCount = filteredList.filter((p) => p.status === 'MENUNGGU_VERIFIKASI').length;
+
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseFloat(formAmount);
+
+    if (!amount || amount <= 0) {
+      showNotification('Nominal kas kecil tidak valid!', 'error');
+      return;
+    }
+
+    if (amount > maxLimitPerNote) {
+      showNotification(
+        `Batas SOP: Pengeluaran darurat laci kasir maksimal Rp ${maxLimitPerNote.toLocaleString('id-ID')} per nota!`,
+        'error'
+      );
+      return;
+    }
+
+    const ok = await addPettyCash(
+      amount,
+      formCategory,
+      formDescription,
+      formReceiptUrl || selectedFile || 'https://images.unsplash.com/photo-1554415707-9e49017aed81?w=500&auto=format&fit=crop&q=80'
+    );
+
+    if (ok) {
+      setIsFormModalOpen(false);
+      setFormAmount('');
+      setFormDescription('');
+      setFormReceiptUrl('');
+      setSelectedFile(null);
+      setFilePreview(null);
+    }
+  };
+
+  const handleTriggerDelete = (item: PettyCashExpense) => {
+    if (isKasir) {
+      showNotification('Kasir tidak diizinkan menghapus data kas kecil!', 'error');
+      return;
+    }
+    setItemToDelete(item);
+    setIsPinModalOpen(true);
+  };
+
+  const handlePinDeleteSuccess = async (pin: string) => {
+    if (itemToDelete) {
+      const success = await deletePettyCash(itemToDelete.id, pin);
+      if (success) {
+        setIsPinModalOpen(false);
+        setItemToDelete(null);
+      }
+    }
+  };
+
+  const handleOpenEditLimit = () => {
+    if (!isSupervisorOrOwner) {
+      showNotification(
+        'Hanya SUPERVISOR atau OWNER yang berwenang mengubah batas SOP kas kecil!',
+        'error'
+      );
+      return;
+    }
+    setTempMaxLimit(maxLimitPerNote.toString());
+    setTempSopNote(sopNote);
+    setIsEditLimitModalOpen(true);
+  };
+
+  const handleSaveLimitSop = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isSupervisorOrOwner) {
+      showNotification(
+        'Hanya SUPERVISOR atau OWNER yang berwenang mengubah batas SOP kas kecil!',
+        'error'
+      );
+      return;
+    }
+    const parsed = parseInt(tempMaxLimit);
+    if (!parsed || parsed <= 0) {
+      showNotification('Batas nominal harus lebih besar dari 0!', 'error');
+      return;
+    }
+    setMaxLimitPerNote(parsed);
+    setSopNote(tempSopNote);
+    localStorage.setItem('dimsum_petty_cash_max_limit', parsed.toString());
+    localStorage.setItem('dimsum_petty_cash_sop_note', tempSopNote);
+    setIsEditLimitModalOpen(false);
+    showNotification('Aturan batas maks per nota kas kecil berhasil diperbarui!', 'success');
+  };
+
+  return (
+    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
+      {/* Top Banner Header */}
+      <div className="relative overflow-hidden bg-brand-espresso text-surface rounded-3xl p-6 shadow-md border border-brand-espresso-muted/30">
+        <div className="relative z-10 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+          <div className="flex flex-col max-w-2xl">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-brand-gold text-brand-espresso text-[11px] font-bold uppercase tracking-wider">
+                Audit Finansial
+              </span>
+              <span className="text-secondary-container text-xs">• Buku Kas Laci Harian</span>
+              {isKasir && (
+                <span className="text-[10px] font-bold text-brand-gold bg-white/10 px-2 py-0.5 rounded-full">
+                  {currentUser.outletName || getActiveOutlet()?.name || 'Cabang Kasir'} (Terkunci)
+                </span>
+              )}
+            </div>
+            <h1 className="font-serif-title text-2xl font-bold text-white tracking-tight">
+              Manajemen Kas Kecil Outlet <span className="text-brand-gold italic">(Petty Cash)</span>
+            </h1>
+            <p className="text-xs text-white/70 mt-1 leading-relaxed">
+              Pencatatan real-time pengeluaran tak terduga laci kasir untuk es batu, galon air, kantong plastik. Batas transaksi darurat maks. Rp {maxLimitPerNote.toLocaleString('id-ID')}/nota dengan bukti struk fisik sah.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 self-stretch xl:self-auto">
+            {isSupervisorOrOwner && (
+              <button
+                type="button"
+                onClick={handleOpenEditLimit}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors border border-white/15 cursor-pointer shadow-xs"
+                title="Atur Batas Maksimal Pengeluaran Kas Kecil"
+              >
+                <Pencil className="w-3.5 h-3.5 text-brand-gold" />
+                <span>Atur Batas SOP</span>
+              </button>
+            )}
+            {!isOwner && (
+              <button
+                onClick={() => setIsFormModalOpen(true)}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-gold hover:bg-brand-gold-hover text-brand-espresso text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>+ Catat Pengeluaran Baru</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Overview Ribbon */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* Card 1: Pengeluaran Hari Ini (Real Data) */}
+        <div className="bg-surface-card rounded-2xl p-4 border border-border-subtle shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-secondary">
+              Pengeluaran Hari Ini
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-surface-container flex items-center justify-center text-primary">
+              <Wallet className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="font-serif-title text-2xl font-bold text-brand-espresso">
+              Rp {todaySpent.toLocaleString('id-ID')}
+            </div>
+            <div className="flex items-center justify-between mt-1 text-xs text-secondary">
+              <span>{todayCount} Nota hari ini</span>
+              <span className="text-brand-espresso font-semibold">Potong Laci Shift</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Pengeluaran Disetujui */}
+        <div className="bg-surface-card rounded-2xl p-4 border border-border-subtle shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-secondary">
+              Pengeluaran Terverifikasi
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-800">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="font-serif-title text-2xl font-bold text-emerald-800">
+              Rp {totalSpent.toLocaleString('id-ID')}
+            </div>
+            <span className="text-[10px] text-secondary mt-1">
+              Disetujui oleh Supervisor/Owner
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Menunggu Verifikasi */}
+        <div className="bg-surface-card rounded-2xl p-4 border border-border-subtle shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-secondary">
+              Menunggu Verifikasi
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-800">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="font-serif-title text-2xl font-bold text-amber-800">
+              {pendingCount} Nota
+            </div>
+            <span className="text-[10px] text-secondary mt-1">
+              Menunggu tanda tangan digital SPV
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: SOP Guardrail Rule */}
+        <div
+          onClick={isSupervisorOrOwner ? handleOpenEditLimit : undefined}
+          className={`bg-surface-card rounded-2xl p-4 border border-border-subtle shadow-xs flex flex-col justify-between relative group ${
+            isSupervisorOrOwner
+              ? 'cursor-pointer hover:border-brand-gold/60 hover:shadow-md transition-all'
+              : ''
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-secondary">
+              Batas Maks per Nota
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center text-red-700">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="font-serif-title text-2xl font-bold text-red-600">
+              Rp {maxLimitPerNote.toLocaleString('id-ID')}
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[10px] text-secondary">
+                {sopNote}
+              </span>
+              {isSupervisorOrOwner && (
+                <span className="text-[10px] font-bold text-amber-700 group-hover:text-amber-800 underline ml-2 whitespace-nowrap">
+                  Klik untuk ubah →
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Petty Cash Table */}
+      <div className="bg-surface-card rounded-2xl border border-border-subtle shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-serif-title text-base font-bold text-brand-espresso">
+              Histori Transaksi Kas Kecil Outlet
+            </h2>
+            <p className="text-xs text-secondary mt-0.5">
+              Rekap pencatatan mutasi kas darurat laci kasir seluruh cabang
+            </p>
+          </div>
+          {isSupervisorOrOwner && (
+            <span className="text-xs font-bold text-status-lunas-text bg-status-lunas-bg border border-status-lunas-border px-3 py-1 rounded-xl">
+              Hak Otorisasi Supervisor Aktif: Dapat Menyetujui / Menolak Nota
+            </span>
+          )}
+        </div>
+
+        {/* Mobile View: Petty Cash Cards (< md screen) */}
+        <div className="md:hidden divide-y divide-border-subtle p-3">
+          {filteredList.length === 0 ? (
+            <div className="py-8 text-center text-secondary text-xs">
+              Belum ada pencatatan kas kecil pada outlet ini.
+            </div>
+          ) : (
+            filteredList.map((item) => (
+              <div key={item.id} className="py-3.5 flex flex-col gap-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="font-bold text-xs text-brand-espresso">
+                      {item.expenseNumber}
+                    </span>
+                    <div className="text-[10px] text-secondary">
+                      {new Date(item.createdAt).toLocaleDateString('id-ID')} • {new Date(item.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB • {item.cashierName}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-serif-title font-bold text-sm text-brand-espresso tabular-nums">
+                      Rp {item.amount.toLocaleString('id-ID')}
+                    </div>
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                        item.status === 'DISETUJUI'
+                          ? 'bg-status-lunas-bg text-status-lunas-text border border-status-lunas-border'
+                          : item.status === 'DITOLAK'
+                          ? 'bg-status-unpaid-bg text-status-unpaid-text border border-status-unpaid-border'
+                          : 'bg-status-pending-bg text-status-pending-text border border-status-pending-border'
+                      }`}
+                    >
+                      {item.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container text-brand-espresso">
+                    {item.category.replace('_', ' ')}
+                  </span>
+                  <span className="text-xs text-secondary truncate">{item.description}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={() => setPreviewReceiptImage(item.receiptImageUrl)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-brand-espresso text-xs font-semibold transition-colors"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                    <span>Lihat Struk</span>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    {isSupervisorOrOwner && item.status === 'MENUNGGU_VERIFIKASI' && (
+                      <>
+                        <button
+                          onClick={() => verifyPettyCash(item.id, 'DISETUJUI')}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Setujui
+                        </button>
+                        <button
+                          onClick={() => verifyPettyCash(item.id, 'DITOLAK')}
+                          className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-bold flex items-center gap-1"
+                        >
+                          <XCircle className="w-3.5 h-3.5" /> Tolak
+                        </button>
+                      </>
+                    )}
+
+                    {item.status === 'MENUNGGU_VERIFIKASI' && (
+                      <button
+                        onClick={() => handleOpenEdit(item)}
+                        className="p-1.5 rounded-lg bg-surface-container text-secondary hover:text-brand-espresso"
+                        title="Edit Catatan"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {isSupervisorOrOwner && (
+                      <button
+                        onClick={() => handleTriggerDelete(item)}
+                        className="p-1.5 rounded-lg bg-surface-container text-secondary hover:text-red-600"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Tablet & Desktop View: Table (md+ screen) */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-surface-container-low border-b border-border-subtle text-[11px] font-bold uppercase tracking-wider text-secondary">
+                <th className="py-3 px-4">No. Kas / Waktu</th>
+                <th className="py-3 px-4">Outlet & Kasir</th>
+                <th className="py-3 px-4">Kategori & Keterangan</th>
+                <th className="py-3 px-4 text-center">Foto Bukti Nota</th>
+                <th className="py-3 px-4 text-right">Nominal (Rp)</th>
+                <th className="py-3 px-4 text-center">Status Audit</th>
+                <th className="py-3 px-4 text-center">Aksi & Otorisasi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-subtle text-xs">
+              {filteredList.map((item) => (
+                <tr key={item.id} className="hover:bg-surface-container-low/50 transition-colors">
+                  <td className="py-3 px-4">
+                    <div className="font-bold text-brand-espresso">{item.expenseNumber}</div>
+                    <div className="text-[10px] text-secondary">
+                      {new Date(item.createdAt).toLocaleDateString('id-ID')} •{' '}
+                      {new Date(item.createdAt).toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}{' '}
+                      WIB
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="font-semibold text-brand-espresso">{item.outletName}</div>
+                    <div className="text-[10px] text-secondary">Kasir: {item.cashierName}</div>
+                  </td>
+                  <td className="py-3 px-4 max-w-xs">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container text-brand-espresso">
+                      {item.category.replace('_', ' ')}
+                    </span>
+                    <p className="text-xs text-brand-espresso mt-1 font-medium leading-relaxed">
+                      {item.description}
+                    </p>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <button
+                      onClick={() => setPreviewReceiptImage(item.receiptImageUrl)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-brand-espresso text-xs font-semibold transition-colors"
+                      title="Lihat foto struk"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                      <span>Lihat Struk</span>
+                    </button>
+                  </td>
+                  <td className="py-3 px-4 text-right font-bold text-brand-espresso tabular-nums">
+                    Rp {item.amount.toLocaleString('id-ID')}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    {item.status === 'DISETUJUI' ? (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-status-lunas-bg text-status-lunas-text border border-status-lunas-border">
+                        DISETUJUI
+                      </span>
+                    ) : item.status === 'DITOLAK' ? (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-status-unpaid-bg text-status-unpaid-text border border-status-unpaid-border">
+                        DITOLAK
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-status-pending-bg text-status-pending-text border border-status-pending-border">
+                        MENUNGGU VERIF
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      {isSupervisorOrOwner && item.status === 'MENUNGGU_VERIFIKASI' && (
+                        <>
+                          <button
+                            onClick={() => verifyPettyCash(item.id, 'DISETUJUI')}
+                            className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors"
+                            title="Setujui Pengeluaran"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => verifyPettyCash(item.id, 'DITOLAK')}
+                            className="p-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                            title="Tolak Pengeluaran"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+
+                      {item.status === 'MENUNGGU_VERIFIKASI' && (
+                        <button
+                          onClick={() => handleOpenEdit(item)}
+                          className="p-1 rounded-lg bg-surface-container hover:bg-brand-gold/20 text-secondary hover:text-brand-espresso transition-colors cursor-pointer"
+                          title="Perbaiki / Edit Catatan Kas Kecil"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {isSupervisorOrOwner && (
+                        <button
+                          onClick={() => handleTriggerDelete(item)}
+                          className="p-1 rounded-lg bg-surface-container hover:bg-red-50 text-secondary hover:text-red-600 transition-colors cursor-pointer"
+                          title="Hapus Catatan (Wajib PIN Supervisor)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal: Input Pengeluaran Baru */}
+      {isFormModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-espresso/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <form
+            onSubmit={handleCreateSubmit}
+            className="w-full max-w-md bg-surface-card rounded-3xl border border-border-subtle shadow-2xl p-6 relative my-6"
+          >
+            <button
+              type="button"
+              onClick={() => setIsFormModalOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-secondary hover:bg-surface-container"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="font-serif-title font-bold text-xl text-brand-espresso">
+              Catat Pengeluaran Kas Kecil Laci
+            </h3>
+            <p className="text-xs text-secondary mt-0.5">
+              Mencatat pengeluaran darurat laci kasir (maks. Rp 150.000) dan upload foto struk fisik.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <RupiahInput
+                label={`Nominal Pengeluaran - Maks Rp ${maxLimitPerNote.toLocaleString('id-ID')}`}
+                value={formAmount}
+                onChange={(e) => setFormAmount(e.target.value)}
+                placeholder="Contoh: 35.000"
+                required
+              />
+
+              <div className="flex flex-col gap-1">
+                <CustomSelect<PettyCashCategory>
+                  label="Kategori Kebutuhan"
+                  size="sm"
+                  value={formCategory}
+                  onChange={(val) => setFormCategory(val)}
+                  options={[
+                    { value: 'ES_BATU', label: 'Es Batu Kristal', sublabel: 'Pendingin minuman & chiller' },
+                    { value: 'GALON_AIR', label: 'Galon Air Mineral', sublabel: 'Air minum & seduhan teh' },
+                    { value: 'PLASTIK_KEMASAN', label: 'Plastik & Kresek HD Takeaway', sublabel: 'Kemasan bungkus bawa pulang' },
+                    { value: 'KEBERSIHAN', label: 'Sabun Cuci & Kebersihan', sublabel: 'Pembersih klakat bambu & dapur' },
+                    { value: 'LAINNYA', label: 'Lain-lain Darurat', sublabel: 'Gas LPG, baterai timbangan, dsb.' },
+                  ]}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-brand-espresso">Keterangan / Keperluan</label>
+                <textarea
+                  rows={2}
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Cth: Beli es batu kristal 2 kantong di warung samping..."
+                  className="w-full p-2.5 rounded-xl bg-surface-container text-xs text-brand-espresso focus:outline-none"
+                  required
+                />
+              </div>
+
+              <ImageUpload
+                value={formReceiptUrl}
+                onChange={(url) => {
+                  setFormReceiptUrl(url);
+                  setFilePreview(url);
+                }}
+                label="Foto Struk / Bukti Nota Fisik (Upload dari Laptop / HP)"
+                placeholder="Pilih foto nota dari laptop atau ambil foto..."
+                helperText="Upload foto struk belanja darurat outlet. Otomatis disimpan ke Cloudinary CDN."
+              />
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsFormModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-border-strong text-xs font-bold text-brand-espresso"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-brand-gold hover:bg-brand-gold-hover text-brand-espresso text-xs font-bold shadow-md transition-all"
+              >
+                Simpan & Ajukan Verifikasi
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal: Preview Foto Struk Nota */}
+      {previewReceiptImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-espresso/80 backdrop-blur-sm p-4">
+          <div className="relative max-w-lg w-full bg-surface-card rounded-3xl p-4 shadow-2xl">
+            <button
+              onClick={() => setPreviewReceiptImage(null)}
+              className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-black text-white rounded-full transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-bold text-brand-espresso block mb-2">
+              Bukti Fisik Struk Nota Belanja
+            </span>
+            <img
+              src={previewReceiptImage}
+              alt="Struk Belanja Kas Kecil"
+              className="w-full h-80 object-cover rounded-2xl border border-border-subtle"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Kas Kecil (Sebelum diverifikasi) */}
+      {isEditModalOpen && itemToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-espresso/60 backdrop-blur-sm p-4">
+          <form
+            onSubmit={handleEditSubmit}
+            className="w-full max-w-md bg-surface-card rounded-3xl border border-border-subtle shadow-2xl p-6 relative"
+          >
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-secondary hover:bg-surface-container"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="font-serif-title font-bold text-xl text-brand-espresso">
+              Perbaiki Data Kas Kecil
+            </h3>
+            <p className="text-xs text-secondary mt-0.5">
+              Koreksi nominal atau keterangan pengeluaran darurat {itemToEdit.expenseNumber} sebelum diverifikasi.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <RupiahInput
+                  label="Nominal Pengeluaran"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  placeholder="Contoh: 35.000"
+                  required
+                />
+                <span className="text-[10px] text-secondary">
+                  Batas maksimal SOP: Rp {maxLimitPerNote.toLocaleString('id-ID')} / nota
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <CustomSelect<PettyCashCategory>
+                  label="Kategori Kebutuhan"
+                  size="sm"
+                  value={editCategory}
+                  onChange={(val) => setEditCategory(val)}
+                  options={[
+                    { value: 'ES_BATU', label: 'Es Batu Kristal', sublabel: 'Pendingin minuman & chiller' },
+                    { value: 'GALON_AIR', label: 'Galon Air Mineral', sublabel: 'Air minum & seduhan teh' },
+                    { value: 'PLASTIK_KEMASAN', label: 'Kantong Plastik / Kresek', sublabel: 'Kemasan bungkus bawa pulang' },
+                    { value: 'KEBERSIHAN', label: 'Sabun Cuci / Tisu / Kebersihan', sublabel: 'Pembersih klakat bambu & dapur' },
+                    { value: 'LAINNYA', label: 'Lain-lain Darurat', sublabel: 'Gas LPG, baterai timbangan, dsb.' },
+                  ]}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-brand-espresso">Keterangan / Alasan Belanja</label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-container text-xs text-brand-espresso focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-border-strong text-xs font-bold text-brand-espresso"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-brand-gold hover:bg-brand-gold-hover text-brand-espresso text-xs font-bold shadow-md transition-all"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Supervisor PIN Authorization Modal for deleting petty cash */}
+      <PinAuthorizationModal
+        isOpen={isPinModalOpen}
+        title="Otorisasi Hapus Kas Kecil"
+        description={`Masukkan PIN Supervisor untuk menghapus data pengeluaran ${itemToDelete?.expenseNumber} dari buku kas laci.`}
+        onSuccess={handlePinDeleteSuccess}
+        onClose={() => {
+          setIsPinModalOpen(false);
+          setItemToDelete(null);
+        }}
+      />
+
+      {/* Modal: Edit Batas SOP Kas Kecil */}
+      {isEditLimitModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <form
+            onSubmit={handleSaveLimitSop}
+            className="w-full max-w-md bg-surface-card rounded-3xl border border-border-subtle shadow-2xl p-6 text-brand-espresso"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border-subtle">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center text-red-700">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif-title text-base font-bold text-brand-espresso">
+                    Edit Batas Maks per Nota
+                  </h3>
+                  <p className="text-[11px] text-secondary">
+                    Aturan SOP pengeluaran darurat laci kasir
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditLimitModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-elevated flex items-center justify-center text-secondary hover:text-brand-espresso transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3.5">
+              <div>
+                <RupiahInput
+                  label="Batas Maksimal Pengeluaran per Nota"
+                  value={tempMaxLimit}
+                  onChange={(e) => setTempMaxLimit(e.target.value)}
+                  placeholder="Contoh: 150.000"
+                  required
+                />
+                <span className="text-[10px] text-secondary">
+                  Nominal ini membatasi pengeluaran kasir saat input kas kecil.
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-brand-espresso">
+                  Instruksi / Catatan SOP Audit
+                </label>
+                <input
+                  type="text"
+                  value={tempSopNote}
+                  onChange={(e) => setTempSopNote(e.target.value)}
+                  placeholder="Contoh: SOP Audit: Wajib foto struk nota fisik"
+                  className="w-full p-2.5 rounded-xl bg-surface-container text-xs text-brand-espresso border border-transparent focus:border-brand-gold focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditLimitModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-border-strong text-xs font-bold text-brand-espresso hover:bg-surface-container transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-brand-gold hover:bg-brand-gold-hover text-brand-espresso text-xs font-bold shadow-md transition-all cursor-pointer"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+};
+

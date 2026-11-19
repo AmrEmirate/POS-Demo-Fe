@@ -1,0 +1,909 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Clock,
+  Coins,
+  BadgeAlert,
+  ArrowRight,
+  Calculator,
+  AlertTriangle,
+  CheckCircle2,
+  Lock,
+  History,
+  QrCode,
+  ShieldCheck,
+  PlusCircle,
+  Printer,
+  FileText,
+  X,
+  PackageSearch,
+} from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { RupiahInput } from '../components/common/RupiahInput';
+import { CloseShiftModal } from '../components/common/CloseShiftModal';
+
+export const ShiftPage: React.FC = () => {
+  const {
+    activeShift,
+    shiftHistory,
+    openShift,
+    currentUser,
+    selectedOutletId,
+    outlets,
+    showNotification,
+    opnameAuditLogs,
+    fetchOpnameAudit,
+  } = useApp();
+
+  const isAuditViewer = currentUser?.role !== 'KASIR';
+
+  useEffect(() => {
+    if (isAuditViewer) {
+      fetchOpnameAudit();
+    }
+  }, [isAuditViewer, selectedOutletId]);
+
+  const [isOpenShiftModal, setIsOpenShiftModal] = useState(false);
+  const [isCloseShiftModal, setIsCloseShiftModal] = useState(false);
+  const [selectedShiftForZReport, setSelectedShiftForZReport] = useState<any>(null);
+  const [zReportPaperSize, setZReportPaperSize] = useState<'80mm' | '58mm'>('80mm');
+  const [startCashInput, setStartCashInput] = useState('500000');
+
+  const outletObj = outlets.find((o) => o.id === selectedOutletId) || outlets[0];
+  const outletName = outletObj?.name || (selectedOutletId === 'all' ? 'Semua Outlet' : 'Outlet Utama');
+
+  const handleOpenShiftSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cash = parseFloat(startCashInput) || 0;
+    if (cash <= 0) {
+      showNotification('Modal awal uang laci harus lebih dari Rp 0!', 'warning');
+      return;
+    }
+    openShift(cash);
+    setIsOpenShiftModal(false);
+  };
+
+  const expectedCash = activeShift ? Number(activeShift.expectedCash || 0) : 0;
+  const safeHistory = Array.isArray(shiftHistory) ? shiftHistory : [];
+
+  return (
+    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
+      {/* 1. Header & Context Card */}
+      <div className="relative overflow-hidden rounded-3xl bg-brand-espresso text-surface p-6 shadow-md border border-brand-espresso-muted/30">
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-status-lunas-bg text-status-lunas-text text-[11px] font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                {activeShift?.status === 'ACTIVE' ? 'Shift Kasir Aktif' : 'Shift Belum Dibuka'}
+              </span>
+              <span className="text-secondary/60 text-xs">/</span>
+              <span className="text-brand-gold font-bold text-xs">{outletName}</span>
+              <span className="text-secondary/60 text-xs">/</span>
+              <span className="text-white/70 text-xs flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> POS Terminal 01
+              </span>
+            </div>
+            <h1 className="font-serif-title text-2xl font-bold text-white tracking-tight">
+              Rekonsiliasi Shift & Laci Kasir
+            </h1>
+            <p className="text-xs text-white/70 max-w-2xl leading-relaxed">
+              Periksa keselarasan fisik uang tunai di drawer terhadap mutasi penjualan, penerimaan modal, dan pengeluaran darurat kas kecil.
+            </p>
+          </div>
+
+          {/* Active Cashier Card */}
+          <div className="flex items-center gap-4 bg-white/10 border border-white/15 p-3 rounded-2xl backdrop-blur-md self-start xl:self-auto">
+            <div className="flex items-center gap-3 pr-4 border-r border-white/15">
+              <div className="w-10 h-10 rounded-xl bg-brand-gold text-brand-espresso flex items-center justify-center font-bold">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-white/70 uppercase font-bold tracking-wider">
+                  Kasir Bertugas
+                </span>
+                <span className="text-xs font-bold text-white">{currentUser?.name || 'Kasir'}</span>
+                <span className="text-[10px] text-brand-gold">
+                  {currentUser?.role === 'OWNER' ? 'Owner / Admin' : 'ID: KSR-DU-084'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col pl-1">
+              <span className="text-[10px] text-white/70 uppercase font-bold tracking-wider">
+                Status Shift
+              </span>
+              <span className="text-xs font-bold text-brand-gold tabular-nums">
+                {activeShift?.status === 'ACTIVE' ? 'Sedang Berjalan' : 'Standby'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Top Metric Drawer Flow Equation Cards */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
+            <Calculator className="w-4 h-4 text-primary" /> Formula Aliran Kas Laci (Drawer Flow Equation)
+          </span>
+          <span className="text-[11px] text-secondary">Perhitungan real-time terintegrasi POS</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5 sm:gap-3 items-stretch">
+          {/* Card 1: Modal Awal */}
+          <div className="rounded-2xl bg-surface-card p-3 sm:p-4 border border-border-subtle shadow-xs flex flex-col justify-between">
+            <div className="flex justify-between items-center text-secondary">
+              <span className="text-[11px] font-bold uppercase">1. Modal Awal Laci</span>
+              <Coins className="w-4 h-4 text-primary" />
+            </div>
+            <div className="mt-3">
+              <div className="font-serif-title font-bold text-lg text-brand-espresso tabular-nums">
+                Rp {Number(activeShift?.startingCash || 0).toLocaleString('id-ID')}
+              </div>
+              <span className="text-[10px] text-secondary">Uang kembalian laci pagi</span>
+            </div>
+          </div>
+
+          {/* Card 2: Penjualan Tunai (+) */}
+          <div className="rounded-2xl bg-surface-card p-4 border border-border-subtle shadow-xs flex flex-col justify-between">
+            <div className="flex justify-between items-center text-secondary">
+              <span className="text-[11px] font-bold uppercase text-emerald-700">(+) Penjualan Tunai</span>
+              <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center">
+                +
+              </span>
+            </div>
+            <div className="mt-3">
+              <div className="font-serif-title font-bold text-lg text-emerald-700 tabular-nums">
+                {currentUser.role === 'KASIR'
+                  ? '••••• (Blind)'
+                  : `Rp ${Number(activeShift?.cashSales || 0).toLocaleString('id-ID')}`}
+              </div>
+              <span className="text-[10px] text-secondary">
+                {currentUser.role === 'KASIR' ? 'Dirahasiakan saat shift aktif' : 'Kas masuk dari transaksi tunai'}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Pengeluaran Darurat (-) */}
+          <div className="rounded-2xl bg-surface-card p-4 border border-border-subtle shadow-xs flex flex-col justify-between">
+            <div className="flex justify-between items-center text-secondary">
+              <span className="text-[11px] font-bold uppercase text-red-600">(-) Kas Kecil Laci</span>
+              <span className="w-5 h-5 rounded-full bg-red-100 text-red-700 text-xs font-bold flex items-center justify-center">
+                -
+              </span>
+            </div>
+            <div className="mt-3">
+              <div className="font-serif-title font-bold text-lg text-red-600 tabular-nums">
+                Rp {Number(activeShift?.pettyCashOut || 0).toLocaleString('id-ID')}
+              </div>
+              <span className="text-[10px] text-secondary">Es batu, galon air, kresek</span>
+            </div>
+          </div>
+
+          {/* Card 4: Uang Kas Sistem (=) */}
+          <div className="rounded-2xl bg-brand-gold-subtle p-4 border border-brand-gold/40 shadow-xs flex flex-col justify-between">
+            <div className="flex justify-between items-center text-brand-espresso">
+              <span className="text-[11px] font-bold uppercase">(=) Kas Sistem di Laci</span>
+              <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-espresso text-xs font-black flex items-center justify-center">
+                =
+              </span>
+            </div>
+            <div className="mt-3">
+              <div className="font-serif-title font-bold text-lg text-brand-espresso tabular-nums">
+                {currentUser.role === 'KASIR'
+                  ? '••••• (Blind)'
+                  : `Rp ${expectedCash.toLocaleString('id-ID')}`}
+              </div>
+              <span className="text-[10px] text-brand-espresso-muted font-medium">
+                {currentUser.role === 'KASIR'
+                  ? 'Dirahasiakan untuk mencegah tebak angka'
+                  : 'Wajib ada di laci saat cek fisik'}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 5: Penjualan QRIS (Terpisah dari laci) */}
+          <div className="col-span-2 sm:col-span-1 rounded-2xl bg-surface-card p-3 sm:p-4 border border-border-subtle shadow-xs flex flex-col justify-between">
+            <div className="flex justify-between items-center text-secondary">
+              <span className="text-[11px] font-bold uppercase">Penjualan QRIS</span>
+              <QrCode className="w-4 h-4 text-primary" />
+            </div>
+            <div className="mt-3">
+              <div className="font-serif-title font-bold text-lg text-brand-espresso tabular-nums">
+                {currentUser.role === 'KASIR'
+                  ? '••••• (Blind)'
+                  : `Rp ${Number(activeShift?.qrisSales || 0).toLocaleString('id-ID')}`}
+              </div>
+              <span className="text-[10px] text-secondary">Langsung masuk rekening bank</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Shift Control & Cash Variance Reconciliation */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left: Action Card for Open/Close Shift */}
+        <div className="lg:col-span-5 bg-surface-card rounded-2xl border border-border-subtle p-5 shadow-xs flex flex-col justify-between">
+          <div>
+            <h3 className="font-serif-title font-bold text-lg text-brand-espresso">
+              Tindakan Sesi Shift
+            </h3>
+            <p className="text-xs text-secondary mt-1">
+              Berdasarkan Blueprint, sesi shift kasir tidak dapat dihapus demi audit keamanan kas internal.
+            </p>
+
+            <div className="mt-4 p-3 rounded-xl bg-surface-container-low space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-secondary">Status Sekarang:</span>
+                <span className="font-bold text-brand-espresso">
+                  {activeShift?.status === 'ACTIVE' ? 'Shift Sedang Aktif' : 'Shift Ditutup'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-secondary">Waktu Dimulai:</span>
+                <span className="font-medium text-brand-espresso">
+                  {activeShift?.startTime
+                    ? new Date(activeShift.startTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    : '-'}{' '}
+                  WIB
+                </span>
+              </div>
+              {activeShift?.actualEndingCash !== undefined && activeShift?.actualEndingCash !== null && (
+                <div className="flex justify-between border-t border-border-subtle pt-2">
+                  <span className="text-secondary">Fisik Terakhir Diinput:</span>
+                  <span className="font-bold text-brand-espresso tabular-nums">
+                    Rp {Number(activeShift.actualEndingCash).toLocaleString('id-ID')}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-2">
+            {activeShift?.status === 'ACTIVE' ? (
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setIsCloseShiftModal(true)}
+                  className="w-full py-3 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-dark text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span>Tutup Shift & Rekonsiliasi Uang Fisik</span>
+                </button>
+                <button
+                  onClick={() => setSelectedShiftForZReport(activeShift)}
+                  className="w-full py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-brand-espresso font-semibold text-xs border border-border-subtle transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-primary" />
+                  <span>Pratinjau Struk Sesi Ini (Interim Report)</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsOpenShiftModal(true)}
+                className="w-full py-3 rounded-xl bg-brand-gold hover:bg-brand-gold-hover text-brand-espresso font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Buka Shift Baru (Input Modal Laci)</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Variance / Reconciliation Result Card */}
+        <div className="lg:col-span-7 bg-surface-card rounded-2xl border border-border-subtle p-5 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif-title font-bold text-lg text-brand-espresso">
+                Status Selisih Kas (Audit Variance)
+              </h3>
+              <span className="text-[10px] font-bold text-secondary uppercase bg-surface-container px-2 py-0.5 rounded-full">
+                Audit Trail Anti-Fraud
+              </span>
+            </div>
+
+            {activeShift?.difference !== undefined && activeShift?.difference !== null ? (
+              <div className="mt-4">
+                <div
+                  className={`p-4 rounded-2xl border flex items-start gap-3 ${
+                    activeShift.difference === 0
+                      ? 'bg-status-lunas-bg border-status-lunas-border text-status-lunas-text'
+                      : activeShift.difference < 0
+                      ? 'bg-status-unpaid-bg border-status-unpaid-border text-status-unpaid-text'
+                      : 'bg-status-pending-bg border-status-pending-border text-status-pending-text'
+                  }`}
+                >
+                  {activeShift.difference === 0 ? (
+                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-emerald-600" />
+                  ) : (
+                    <AlertTriangle className="w-6 h-6 flex-shrink-0 text-amber-600" />
+                  )}
+                  <div>
+                    <h4 className="font-bold text-sm">
+                      {activeShift.difference === 0
+                        ? 'Kas Seimbang Sempurna (Rp 0 Selisih)'
+                        : activeShift.difference < 0
+                        ? `Selisih Kurang Fisik Kas: Rp ${Math.abs(
+                            Number(activeShift.difference)
+                          ).toLocaleString('id-ID')}`
+                        : `Selisih Lebih Fisik Kas: Rp ${Number(activeShift.difference).toLocaleString(
+                            'id-ID'
+                          )}`}
+                    </h4>
+                    <p className="text-xs opacity-90 mt-1">
+                      Uang Fisik Dihitung: Rp{' '}
+                      {Number(activeShift.actualEndingCash || 0).toLocaleString('id-ID')} vs Sistem: Rp{' '}
+                      {Number(activeShift.expectedCash || 0).toLocaleString('id-ID')}
+                    </p>
+                    {activeShift.notes && (
+                      <p className="text-[11px] font-semibold mt-2 pt-1 border-t border-current/20">
+                        Catatan Kasir: "{activeShift.notes}"
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 py-8 text-center text-secondary border border-dashed border-border-subtle rounded-2xl">
+                <Coins className="w-8 h-8 mx-auto text-secondary/60 mb-2" />
+                <p className="text-xs font-medium">Shift sedang berjalan aktif</p>
+                <p className="text-[11px] text-secondary/70 mt-0.5">
+                  Lakukan tutup shift saat pergantian kasir untuk membandingkan uang fisik di drawer.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-border-subtle text-[11px] text-secondary flex items-center justify-between">
+            <span>Kebijakan Shift: Setiap kasir bertanggung jawab atas uang laci</span>
+            <span className="font-bold text-brand-espresso">SOP Dimsum Intan</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Riwayat Sesi Shift Selesai (Closed Shifts Audit Log) */}
+      <div className="bg-surface-card rounded-3xl p-6 border border-border-subtle shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <History className="w-5 h-5 text-primary" />
+            <div>
+              <h3 className="font-serif-title text-base font-bold text-brand-espresso">
+                Riwayat Sesi Shift Ditutup (Audit Log Rekonsiliasi)
+              </h3>
+              <p className="text-[11px] text-secondary">
+                Catatan mutasi uang laci kasir pada shift-shift sebelumnya
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold px-3 py-1 rounded-full bg-surface-container text-brand-espresso">
+            {safeHistory.length} Sesi Tercatat
+          </span>
+        </div>
+
+        {/* Mobile View: Shift History Cards (< md screen) */}
+        <div className="md:hidden divide-y divide-border-subtle">
+          {safeHistory.length === 0 ? (
+            <div className="py-8 text-center text-secondary text-xs">
+              Belum ada riwayat shift yang ditutup.
+            </div>
+          ) : (
+            safeHistory.map((s) => {
+              const diff = Number(s.difference ?? 0);
+              const startCash = Number(s.startingCash || 0);
+              const cashSales = Number(s.cashSales || 0);
+              const endingCash = Number(s.actualEndingCash ?? 0);
+
+              let timeRange = '-';
+              try {
+                const start = s.startTime ? new Date(s.startTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+                const end = s.endTime ? new Date(s.endTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+                timeRange = `${start} - ${end}`;
+              } catch {
+                timeRange = '-';
+              }
+
+              return (
+                <div key={s.id} className="py-3.5 flex flex-col gap-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-brand-espresso">{s.shiftName || 'Shift'}</div>
+                      <div className="text-[10px] text-secondary">
+                        {timeRange} • {s.cashierName || 'Kasir'}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        diff === 0
+                          ? 'bg-status-lunas-bg text-status-lunas-text border border-status-lunas-border'
+                          : diff < 0
+                          ? 'bg-status-unpaid-bg text-status-unpaid-text border border-status-unpaid-border'
+                          : 'bg-status-pending-bg text-status-pending-text border border-status-pending-border'
+                      }`}
+                    >
+                      {diff === 0
+                        ? 'SEIMBANG'
+                        : diff < 0
+                        ? `-Rp ${Math.abs(diff).toLocaleString('id-ID')}`
+                        : `+Rp ${diff.toLocaleString('id-ID')}`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 bg-surface-container-low p-2.5 rounded-xl text-xs">
+                    <div>
+                      <span className="text-[10px] text-secondary block">Modal & Penjualan</span>
+                      <span className="font-semibold text-brand-espresso">
+                        Rp {startCash.toLocaleString('id-ID')} + <span className="text-emerald-700">Rp {cashSales.toLocaleString('id-ID')}</span>
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-secondary block">Kas Fisik Laci</span>
+                      <span className="font-bold text-brand-espresso">
+                        Rp {endingCash.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {s.notes && (
+                    <p className="text-[11px] text-secondary italic">
+                      "{s.notes}"
+                    </p>
+                  )}
+
+                  <button
+                    onClick={() => setSelectedShiftForZReport(s)}
+                    className="mt-1 w-full py-1.5 rounded-lg bg-surface-container hover:bg-brand-gold/20 text-brand-espresso text-xs font-semibold flex items-center justify-center gap-1.5 border border-border-subtle cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Cetak Struk Z-Report</span>
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Tablet & Desktop View: Table (md+ screen) */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-surface-container-low border-b border-border-subtle text-[11px] font-bold uppercase tracking-wider text-secondary">
+                <th className="py-3 px-4">Shift & Waktu</th>
+                <th className="py-3 px-4">Outlet & Kasir</th>
+                <th className="py-3 px-4 text-right">Modal Awal</th>
+                <th className="py-3 px-4 text-right">Penjualan Tunai</th>
+                <th className="py-3 px-4 text-right">Kas Kecil</th>
+                <th className="py-3 px-4 text-right">Sistem vs Fisik</th>
+                <th className="py-3 px-4 text-center">Selisih Kas</th>
+                <th className="py-3 px-4">Catatan</th>
+                <th className="py-3 px-4 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-subtle text-xs">
+              {safeHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-secondary">
+                    Belum ada riwayat shift yang ditutup.
+                  </td>
+                </tr>
+              ) : (
+                safeHistory.map((s) => {
+                  const diff = Number(s.difference ?? 0);
+                  const startCash = Number(s.startingCash || 0);
+                  const cashSales = Number(s.cashSales || 0);
+                  const pettyCashVal = Number(s.pettyCashOut || 0);
+                  const endingCash = Number(s.actualEndingCash ?? 0);
+                  const expectedCashVal = Number(s.expectedCash || 0);
+
+                  let timeRange = '-';
+                  try {
+                    const start = s.startTime ? new Date(s.startTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+                    const end = s.endTime ? new Date(s.endTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+                    timeRange = `${start} - ${end}`;
+                  } catch {
+                    timeRange = '-';
+                  }
+
+                  return (
+                    <tr key={s.id} className="hover:bg-surface-container-low/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-brand-espresso">{s.shiftName || 'Shift'}</div>
+                        <div className="text-[10px] text-secondary">
+                          {timeRange}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-brand-espresso">{s.outletName || 'Outlet'}</div>
+                        <div className="text-[10px] text-secondary">{s.cashierName || 'Kasir'} ({s.terminalId || 'POS-01'})</div>
+                      </td>
+                      <td className="py-3 px-4 text-right tabular-nums text-secondary">
+                        Rp {startCash.toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3 px-4 text-right tabular-nums font-semibold text-emerald-700">
+                        +Rp {cashSales.toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3 px-4 text-right tabular-nums text-red-600">
+                        -Rp {pettyCashVal.toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3 px-4 text-right tabular-nums">
+                        <div className="font-bold text-brand-espresso">
+                          Fisik: Rp {endingCash.toLocaleString('id-ID')}
+                        </div>
+                        <div className="text-[10px] text-secondary">
+                          Sistem: Rp {expectedCashVal.toLocaleString('id-ID')}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            diff === 0
+                              ? 'bg-status-lunas-bg text-status-lunas-text border border-status-lunas-border'
+                              : diff < 0
+                              ? 'bg-status-unpaid-bg text-status-unpaid-text border border-status-unpaid-border'
+                              : 'bg-status-pending-bg text-status-pending-text border border-status-pending-border'
+                          }`}
+                        >
+                          {diff === 0
+                            ? 'SEIMBANG'
+                            : diff < 0
+                            ? `-Rp ${Math.abs(diff).toLocaleString('id-ID')}`
+                            : `+Rp ${diff.toLocaleString('id-ID')}`}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 max-w-xs truncate text-[11px] text-secondary">
+                        {s.notes || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedShiftForZReport(s)}
+                          title="Cetak Struk Z-Report Shift"
+                          className="p-1.5 rounded-lg bg-surface-container hover:bg-brand-gold/20 text-brand-espresso border border-border-subtle transition-all cursor-pointer inline-flex items-center gap-1 text-[11px] font-bold"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Z-Report</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal: Buka Shift */}
+      {isOpenShiftModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-espresso/60 backdrop-blur-sm p-4">
+          <form
+            onSubmit={handleOpenShiftSubmit}
+            className="w-full max-w-md bg-surface-card rounded-3xl border border-border-subtle shadow-2xl p-6 relative"
+          >
+            <h3 className="font-serif-title font-bold text-xl text-brand-espresso">
+              Buka Sesi Shift Kasir Baru
+            </h3>
+            <p className="text-xs text-secondary mt-1">
+              Masukkan nominal uang modal awal (uang kembalian) yang diserahkan ke dalam laci kasir.
+            </p>
+
+            <div className="my-5 flex flex-col gap-1.5">
+              <RupiahInput
+                label="Modal Awal Laci"
+                value={startCashInput}
+                onChange={(e) => setStartCashInput(e.target.value)}
+                placeholder="Contoh: 500.000"
+                required
+              />
+              <span className="text-[11px] text-secondary">Standar modal kembalian: Rp 500.000</span>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsOpenShiftModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-border-strong text-xs font-bold text-brand-espresso"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-brand-gold hover:bg-brand-gold-hover text-brand-espresso text-xs font-bold shadow-md transition-all"
+              >
+                Buka Shift Sekarang
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal: Tutup Shift & Rekonsiliasi + Blind Stock Opname */}
+      <CloseShiftModal
+        isOpen={isCloseShiftModal}
+        onClose={() => setIsCloseShiftModal(false)}
+      />
+
+      {/* Audit Pemakaian Bahan Baku (Khusus Owner / Supervisor) */}
+      {isAuditViewer && (
+        <div className="rounded-3xl bg-surface-card border border-border-subtle p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-brand-terracotta/15 text-brand-terracotta flex items-center justify-center shrink-0">
+                <PackageSearch className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-brand-espresso">
+                  Audit Stock Opname Bahan Baku (Anti-Fraud)
+                </h3>
+                <p className="text-[11px] text-secondary">
+                  Perbandingan pemakaian teoritis dari struk POS vs hitungan fisik kasir saat tutup shift.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => fetchOpnameAudit()}
+              className="px-3 py-1.5 rounded-xl border border-border-strong text-xs font-bold text-brand-espresso hover:bg-surface-container cursor-pointer self-start"
+            >
+              Muat Ulang Audit
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-border-subtle text-[10px] uppercase text-secondary">
+                  <th className="py-2 pr-3">Bahan Baku</th>
+                  <th className="py-2 px-2">Shift / Kasir</th>
+                  <th className="py-2 px-2 text-right">Awal + Masuk</th>
+                  <th className="py-2 px-2 text-right">Teoritis POS</th>
+                  <th className="py-2 px-2 text-right">Target Sisa</th>
+                  <th className="py-2 px-2 text-right">Fisik Kasir</th>
+                  <th className="py-2 px-2 text-right">Selisih</th>
+                  <th className="py-2 pl-2 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {opnameAuditLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-6 text-center text-secondary">
+                      Belum ada riwayat audit opname bahan baku. Pastikan bahan baku sudah ditambahkan di Master Menu & HPP.
+                    </td>
+                  </tr>
+                ) : (
+                  opnameAuditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-surface-container/40">
+                      <td className="py-2.5 pr-3 font-bold text-brand-espresso">
+                        {log.materialName}
+                        <span className="block text-[10px] font-normal text-secondary">
+                          {log.unit}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <span className="font-semibold text-brand-espresso block">
+                          {log.shiftName}
+                        </span>
+                        <span className="text-[10px] text-secondary">{log.cashierName}</span>
+                      </td>
+                      <td className="py-2.5 px-2 text-right tabular-nums">
+                        {log.openingStock + log.restockIn}
+                      </td>
+                      <td className="py-2.5 px-2 text-right tabular-nums text-secondary">
+                        -{log.theoreticalUsed}
+                      </td>
+                      <td className="py-2.5 px-2 text-right tabular-nums font-semibold">
+                        {log.expectedClosing}
+                      </td>
+                      <td className="py-2.5 px-2 text-right tabular-nums font-bold text-brand-espresso">
+                        {log.actualClosing}
+                      </td>
+                      <td
+                        className={`py-2.5 px-2 text-right tabular-nums font-black ${
+                          log.status === 'LEAKAGE'
+                            ? 'text-red-600'
+                            : log.status === 'SURPLUS'
+                            ? 'text-amber-600'
+                            : 'text-emerald-600'
+                        }`}
+                      >
+                        {log.variance > 0 ? `+${log.variance}` : log.variance}
+                        <span className="block text-[10px] font-semibold">
+                          ({log.varianceValue >= 0 ? '+' : '-'}Rp{' '}
+                          {Math.abs(log.varianceValue).toLocaleString('id-ID')})
+                        </span>
+                      </td>
+                      <td className="py-2.5 pl-2 text-right">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            log.status === 'LEAKAGE'
+                              ? 'bg-red-100 text-red-700'
+                              : log.status === 'SURPLUS'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}
+                        >
+                          {log.status === 'LEAKAGE'
+                            ? 'KEBOCORAN'
+                            : log.status === 'SURPLUS'
+                            ? 'SURPLUS'
+                            : 'NORMAL'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Cetak Struk Z-Report Tutup Shift */}
+      {selectedShiftForZReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-espresso/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-surface-card rounded-3xl border border-border-subtle shadow-2xl overflow-hidden my-6">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-container-low">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                <span className="font-bold text-sm text-brand-espresso">Struk Z-Report Tutup Shift</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-espresso text-brand-gold rounded-xl text-xs font-bold shadow-xs hover:bg-brand-espresso-muted cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak ({zReportPaperSize})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedShiftForZReport(null)}
+                  className="p-1.5 text-secondary hover:bg-surface-container rounded-lg cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Paper Size Selector */}
+            <div className="flex items-center justify-between px-6 py-2 bg-surface-container-low border-b border-border-subtle text-[11px]">
+              <span className="text-secondary font-medium">Ukuran Kertas:</span>
+              <div className="flex items-center bg-surface-container p-0.5 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setZReportPaperSize('80mm')}
+                  className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                    zReportPaperSize === '80mm'
+                      ? 'bg-brand-espresso text-brand-gold shadow-xs'
+                      : 'text-secondary hover:text-brand-espresso'
+                  }`}
+                >
+                  80mm Standar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZReportPaperSize('58mm')}
+                  className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                    zReportPaperSize === '58mm'
+                      ? 'bg-brand-espresso text-brand-gold shadow-xs'
+                      : 'text-secondary hover:text-brand-espresso'
+                  }`}
+                >
+                  58mm Mini
+                </button>
+              </div>
+            </div>
+
+            {/* Thermal Print Receipt Content */}
+            <div
+              id="shift-zreport-receipt"
+              className={`p-6 bg-white text-gray-900 font-mono text-xs ${
+                zReportPaperSize === '58mm' ? 'receipt-58mm max-w-[280px] mx-auto text-[11px]' : 'receipt-80mm'
+              }`}
+            >
+              <div className="text-center pb-3 border-b-2 border-black">
+                <h2 className="font-bold text-base tracking-wider text-black">
+                  DIMSUM INTAN
+                </h2>
+                <p className="text-xs font-bold mt-0.5">REKAP TUTUP SHIFT KASIR</p>
+                <p className="text-[10px] text-gray-600">(Z-REPORT AUDIT REKONSILIASI)</p>
+                <p className="text-[10px] text-gray-500 mt-1">{selectedShiftForZReport.outletName || outletName}</p>
+              </div>
+
+              <div className="py-2.5 border-b border-dashed border-gray-400 space-y-1 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Nama Sesi:</span>
+                  <span className="font-bold">{selectedShiftForZReport.shiftName || 'Shift'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Kasir:</span>
+                  <span>{selectedShiftForZReport.cashierName || currentUser.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Waktu Buka:</span>
+                  <span>{selectedShiftForZReport.startTime ? new Date(selectedShiftForZReport.startTime).toLocaleString('id-ID') : '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Waktu Tutup:</span>
+                  <span>{selectedShiftForZReport.endTime ? new Date(selectedShiftForZReport.endTime).toLocaleString('id-ID') : 'Sedang Aktif'}</span>
+                </div>
+              </div>
+
+              {/* Rincian Mutasi Kas */}
+              <div className="py-3 border-b border-dashed border-gray-400 space-y-1.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span>Modal Awal Kas:</span>
+                  <span>Rp {Number(selectedShiftForZReport.startingCash || 0).toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between text-emerald-800 font-semibold">
+                  <span>(+) Penjualan Tunai:</span>
+                  <span>Rp {Number(selectedShiftForZReport.cashSales || 0).toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between text-blue-800">
+                  <span>(i) Penjualan QRIS:</span>
+                  <span>Rp {Number(selectedShiftForZReport.qrisSales || 0).toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between text-red-700">
+                  <span>(-) Kas Kecil Keluar:</span>
+                  <span>-Rp {Number(selectedShiftForZReport.pettyCashOut || 0).toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between pt-1 border-t border-gray-300 font-bold">
+                  <span>Kas Diharapkan di Laci:</span>
+                  <span>Rp {Number(selectedShiftForZReport.expectedCash || 0).toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between font-bold text-black">
+                  <span>Kas Fisik Dihitung:</span>
+                  <span>Rp {Number(selectedShiftForZReport.actualEndingCash || 0).toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+
+              {/* Status Selisih */}
+              <div className="py-2.5 border-b border-dashed border-gray-400 text-center">
+                <span className="text-[10px] text-gray-500 uppercase block">Status Rekonsiliasi:</span>
+                <span className="font-bold text-sm block mt-0.5">
+                  {Number(selectedShiftForZReport.difference || 0) === 0
+                    ? '*** SEIMBANG (RP 0) ***'
+                    : Number(selectedShiftForZReport.difference || 0) < 0
+                    ? `*** MINUS: -Rp ${Math.abs(Number(selectedShiftForZReport.difference)).toLocaleString('id-ID')} ***`
+                    : `*** LEBIH: +Rp ${Number(selectedShiftForZReport.difference).toLocaleString('id-ID')} ***`}
+                </span>
+                {selectedShiftForZReport.notes && (
+                  <p className="text-[10px] text-gray-600 mt-1 italic">
+                    Catatan: {selectedShiftForZReport.notes}
+                  </p>
+                )}
+              </div>
+
+              {/* Tanda Tangan */}
+              <div className="pt-4 grid grid-cols-2 gap-4 text-center text-[10px] text-gray-600">
+                <div>
+                  <p>Kasir Bertugas</p>
+                  <div className="h-10"></div>
+                  <p className="font-bold text-black border-t border-gray-400 pt-1">
+                    ( {selectedShiftForZReport.cashierName || currentUser.name} )
+                  </p>
+                </div>
+                <div>
+                  <p>Supervisor / Owner</p>
+                  <div className="h-10"></div>
+                  <p className="font-bold text-black border-t border-gray-400 pt-1">
+                    ( ........................ )
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-surface-container-low border-t border-border-subtle flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedShiftForZReport(null)}
+                className="w-full py-2.5 rounded-xl bg-surface-card border border-border-strong text-xs font-bold text-brand-espresso cursor-pointer hover:bg-surface-container"
+              >
+                Tutup Pratinjau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
