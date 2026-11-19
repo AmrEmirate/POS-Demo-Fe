@@ -231,7 +231,7 @@ export const PosPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setCurrentView('sesi-shift-kasir')}
-            className="px-4 py-2.5 rounded-xl bg-brand-espresso hover:bg-[#0A3366] text-brand-gold text-xs font-bold shadow-xs cursor-pointer shrink-0 min-h-[40px]"
+            className="px-4 py-2.5 rounded-xl bg-brand-espresso hover:bg-[#1E4E79] text-brand-gold text-xs font-bold shadow-xs cursor-pointer shrink-0 min-h-[40px]"
           >
             Buka Sesi Shift Kasir
           </button>
@@ -655,7 +655,7 @@ export const PosPage: React.FC = () => {
                   type="button"
                   onClick={() => handleOpenCheckout('CASH')}
                   disabled={cart.length === 0}
-                  className="flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl bg-brand-espresso hover:bg-[#0A3366] text-brand-gold text-[11px] font-bold shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 cursor-pointer min-h-[48px]"
+                  className="flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl bg-brand-espresso hover:bg-[#1E4E79] text-brand-gold text-[11px] font-bold shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 cursor-pointer min-h-[48px]"
                 >
                   <Banknote className="w-4 h-4 shrink-0" />
                   <span className="truncate">Tunai</span>
@@ -1104,7 +1104,7 @@ export const PosPage: React.FC = () => {
                 className={`w-full sm:w-auto min-h-[44px] px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2 text-center ${
                   selectedPaymentMethod === 'QRIS'
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-stone-950 font-black'
-                    : 'bg-brand-espresso hover:bg-[#0A3366] text-brand-gold font-bold'
+                    : 'bg-brand-espresso hover:bg-[#1E4E79] text-brand-gold font-bold'
                 }`}
               >
                 <CheckCircle className="w-4 h-4 shrink-0" />

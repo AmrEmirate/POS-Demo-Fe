@@ -389,7 +389,7 @@ export const BranchesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Banner / Header */}
-      <div className="bg-gradient-to-r from-brand-espresso via-[#0A3366] to-brand-espresso rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-white/10">
+      <div className="bg-gradient-to-r from-brand-espresso via-[#1E4E79] to-brand-espresso rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-white/10">
         <div className="absolute -right-16 -top-16 w-64 h-64 bg-brand-gold/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-brand-terracotta/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -946,7 +946,7 @@ export const BranchesPage: React.FC = () => {
                       {/* Top Row: Code Badge & Actions */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-espresso to-[#0A3366] text-brand-gold font-black text-xs flex items-center justify-center shadow-xs">
+                          <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-espresso to-[#1E4E79] text-brand-gold font-black text-xs flex items-center justify-center shadow-xs">
                             {outlet.code}
                           </span>
                           <div>

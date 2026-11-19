@@ -24,7 +24,7 @@ export const LoginPage: React.FC = () => {
 
   const brandName = currentTenant?.name || 'Pro POS Enterprise';
   const brandSlug = currentTenant?.slug ? `${currentTenant.slug}.posmu.cloud` : 'PT Pro Teknologi • Cloud POS';
-  const brandColor = currentTenant?.themeColor || '#0284c7';
+  const brandColor = currentTenant?.themeColor || '#113A5D';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,18 +44,18 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#00142B] via-[#002045] to-[#0A3366] p-4 sm:p-6 antialiased relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#0D2B45] via-[#113A5D] to-[#1A4B76] p-4 sm:p-6 antialiased relative overflow-hidden">
       {/* Background Decorative Rings */}
       <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-brand-gold/10 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-brand-terracotta/10 blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md lg:max-w-4xl grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-surface-card/95 backdrop-blur-xl z-10">
         {/* Left Side: Brand Heritage Banner (Desktop Only) */}
-        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#00142B] via-[#002045] to-[#0A3366] p-8 flex-col justify-between text-white relative">
+        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#0D2B45] via-[#113A5D] to-[#1E4E79] p-8 flex-col justify-between text-white relative">
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
               <div
-                className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center shadow-lg border-2 border-sky-300/60 bg-white p-1 shrink-0"
+                className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center shadow-lg border border-white/25 bg-white p-1 shrink-0"
               >
                 <img
                   src={currentTenant?.logoUrl || '/logo.png'}
@@ -116,7 +116,7 @@ export const LoginPage: React.FC = () => {
             {/* Mobile Brand Header */}
             <div className="flex lg:hidden flex-col items-center text-center mb-6">
               <div
-                className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg border-2 border-sky-300/60 bg-white p-1.5 mb-2.5"
+                className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg border border-slate-200 bg-white p-1.5 mb-2.5"
               >
                 <img
                   src={currentTenant?.logoUrl || '/logo.png'}

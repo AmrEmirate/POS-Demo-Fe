@@ -55,7 +55,7 @@ export function createInitialDemoState(): DemoState {
     slug: 'demo',
     plan: 'PRO',
     status: 'ACTIVE',
-    themeColor: '#0284c7',
+    themeColor: '#113A5D',
     logoUrl: '/logo.png',
     pricePerOutlet: 150000,
     maxOutlets: 5,

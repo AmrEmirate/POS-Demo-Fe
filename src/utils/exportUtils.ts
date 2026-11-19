@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx';
+
 /**
  * Utility untuk Ekspor & Impor Data Laporan / Master ke CSV & Microsoft Excel
  * Dilengkapi UTF-8 BOM (\uFEFF) agar terbaca sempurna di Microsoft Excel
@@ -200,5 +202,36 @@ export const downloadBranchCsvTemplate = () => {
     ],
   ];
 
-  exportToCsv('Template_Impor_Cabang_Dimsum_Intan', headers, sampleRows);
+  exportToCsv('Template_Impor_Cabang_Pro_POS', headers, sampleRows);
+};
+
+export interface ExcelSheetData {
+  name: string;
+  rows: (string | number)[][];
+  colWidths?: number[];
+}
+
+/**
+ * Builds an XLSX workbook from multi-sheet AoA data (pure, testable).
+ */
+export const buildExcelWorkbook = (sheets: ExcelSheetData[]): XLSX.WorkBook => {
+  const wb = XLSX.utils.book_new();
+  for (const sheet of sheets) {
+    const safeName = sheet.name.slice(0, 31).replace(/[\\/?*[\]]/g, '_');
+    const ws = XLSX.utils.aoa_to_sheet(sheet.rows);
+    if (sheet.colWidths && sheet.colWidths.length > 0) {
+      ws['!cols'] = sheet.colWidths.map((wch) => ({ wch }));
+    }
+    XLSX.utils.book_append_sheet(wb, ws, safeName);
+  }
+  return wb;
+};
+
+/**
+ * Exports multi-sheet data to a genuine Microsoft Excel (.xlsx) file.
+ */
+export const exportWorkbookToXlsx = (filename: string, sheets: ExcelSheetData[]) => {
+  const wb = buildExcelWorkbook(sheets);
+  const safeFilename = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
+  XLSX.writeFile(wb, safeFilename);
 };
