@@ -9,7 +9,7 @@ interface SubscriptionPaywallGuardProps {
 
 export const SubscriptionPaywallGuard: React.FC<SubscriptionPaywallGuardProps> = ({
   featureName = 'Fitur Operasional Kasir & Keuangan',
-  description = 'Fitur ini memerlukan paket langganan Cloud POS Dimsum Intan yang aktif untuk digunakan.',
+  description = 'Fitur ini memerlukan paket langganan Cloud POS Pro POS Enterprise yang aktif untuk digunakan.',
 }) => {
   const { setCurrentView, billingStatus } = useApp();
 

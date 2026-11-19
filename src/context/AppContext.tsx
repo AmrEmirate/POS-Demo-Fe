@@ -717,7 +717,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (window.location.pathname !== newPath) {
           window.history.pushState({ view, outletId: selectedOutletId }, '', newPath);
         }
-        document.title = `Dimsum Intan - ${VIEW_TITLES[view] || 'Cloud POS'}`;
+        document.title = `Pro POS Enterprise - ${VIEW_TITLES[view] || 'Cloud POS'}`;
       }
     },
     [selectedOutletId, outlets]
@@ -748,7 +748,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const parsed = parsePathToRoute(window.location.pathname, outlets);
       if (parsed.view) {
         setCurrentViewState(parsed.view);
-        document.title = `Dimsum Intan - ${VIEW_TITLES[parsed.view] || 'Cloud POS'}`;
+        document.title = `Pro POS Enterprise - ${VIEW_TITLES[parsed.view] || 'Cloud POS'}`;
       }
       if (parsed.matchedOutletId && parsed.matchedOutletId !== selectedOutletId) {
         setSelectedOutletIdState(parsed.matchedOutletId);

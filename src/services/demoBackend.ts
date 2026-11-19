@@ -16,7 +16,7 @@ import type {
   WalletSummary,
 } from '../types';
 
-const STORAGE_KEY = 'pro_pos_demo_state_v1';
+const STORAGE_KEY = 'pro_pos_demo_state_v2';
 
 export interface DemoState {
   tenant: TenantInfo;
@@ -51,11 +51,12 @@ const nowIso = (offsetMinutes = 0) =>
 export function createInitialDemoState(): DemoState {
   const tenant: TenantInfo = {
     id: 'demo-tenant-1',
-    name: 'Dimsum Intan (Mode Demo)',
+    name: 'Pro POS Enterprise (Demo)',
     slug: 'demo',
     plan: 'PRO',
     status: 'ACTIVE',
-    themeColor: '#FFCC00',
+    themeColor: '#0284c7',
+    logoUrl: '/logo.png',
     pricePerOutlet: 150000,
     maxOutlets: 5,
     dailyTxLimitPerOutlet: 500,

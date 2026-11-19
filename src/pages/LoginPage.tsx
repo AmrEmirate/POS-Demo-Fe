@@ -22,9 +22,9 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const brandName = currentTenant?.name || 'PRO POS DEMO';
-  const brandSlug = currentTenant?.slug ? `${currentTenant.slug}.posmu.cloud` : 'Cloud POS & Accounting Demo';
-  const brandColor = currentTenant?.themeColor || '#ea580c';
+  const brandName = currentTenant?.name || 'Pro POS Enterprise';
+  const brandSlug = currentTenant?.slug ? `${currentTenant.slug}.posmu.cloud` : 'PT Pro Teknologi • Cloud POS';
+  const brandColor = currentTenant?.themeColor || '#0284c7';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,23 +44,23 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#1E1715] via-[#2A1F1C] to-[#16100E] p-4 sm:p-6 antialiased relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#00142B] via-[#002045] to-[#0A3366] p-4 sm:p-6 antialiased relative overflow-hidden">
       {/* Background Decorative Rings */}
       <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-brand-gold/10 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-brand-terracotta/10 blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md lg:max-w-4xl grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-surface-card/95 backdrop-blur-xl z-10">
         {/* Left Side: Brand Heritage Banner (Desktop Only) */}
-        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-brand-espresso via-[#382622] to-brand-espresso p-8 flex-col justify-between text-white relative">
+        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#00142B] via-[#002045] to-[#0A3366] p-8 flex-col justify-between text-white relative">
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
               <div
-                className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center shadow-lg border-2 border-brand-gold bg-[#FFCC00] shrink-0"
+                className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center shadow-lg border-2 border-sky-300/60 bg-white p-1 shrink-0"
               >
                 <img
-                  src={currentTenant?.logoUrl || '/logo_intan.png'}
+                  src={currentTenant?.logoUrl || '/logo.png'}
                   alt={brandName}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div className="min-w-0">
@@ -116,12 +116,12 @@ export const LoginPage: React.FC = () => {
             {/* Mobile Brand Header */}
             <div className="flex lg:hidden flex-col items-center text-center mb-6">
               <div
-                className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center shadow-lg border-2 border-brand-gold bg-[#FFCC00] mb-2.5"
+                className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg border-2 border-sky-300/60 bg-white p-1.5 mb-2.5"
               >
                 <img
-                  src={currentTenant?.logoUrl || '/logo_intan.png'}
+                  src={currentTenant?.logoUrl || '/logo.png'}
                   alt={brandName}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <h1 className="font-serif-title font-bold text-xl text-brand-espresso tracking-tight">

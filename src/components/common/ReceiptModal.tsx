@@ -462,7 +462,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, isOpen, onClo
           <button
             id="btn-close-receipt"
             onClick={onClose}
-            className="min-h-[44px] px-6 py-2.5 rounded-xl bg-brand-espresso text-brand-gold text-xs font-bold hover:bg-[#2e211e] transition-all cursor-pointer shadow-xs active:scale-95"
+            className="min-h-[44px] px-6 py-2.5 rounded-xl bg-brand-espresso text-brand-gold text-xs font-bold hover:bg-[#0A3366] transition-all cursor-pointer shadow-xs active:scale-95"
           >
             Tutup Nota
           </button>

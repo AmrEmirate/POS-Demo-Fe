@@ -221,7 +221,7 @@ export const PaymentGatewayPage: React.FC = () => {
             </span>
           </div>
           <p className="text-secondary text-sm mt-1">
-            Konfigurasi gateway pembayaran otomatis QRIS Dinamis, Virtual Account Bank, dan E-Wallet untuk kasir POS Dimsum Intan.
+            Konfigurasi gateway pembayaran otomatis QRIS Dinamis, Virtual Account Bank, dan E-Wallet untuk kasir POS Pro POS Enterprise.
           </p>
         </div>
 
@@ -380,7 +380,7 @@ export const PaymentGatewayPage: React.FC = () => {
               <Coins className="w-10 h-10 text-secondary mx-auto" />
               <h3 className="font-serif-title text-base font-bold text-brand-espresso">Mode Offline Aktif</h3>
               <p className="text-xs text-secondary max-w-md mx-auto">
-                Kasir POS Dimsum Intan beroperasi secara manual tanpa integrasi gateway pihak ketiga. Semua transaksi ditutup melalui laci uang tunai atau rekonsiliasi manual.
+                Kasir POS Pro POS Enterprise beroperasi secara manual tanpa integrasi gateway pihak ketiga. Semua transaksi ditutup melalui laci uang tunai atau rekonsiliasi manual.
               </p>
             </div>
           ) : selectedProvider === 'DUITKU' ? (
@@ -641,7 +641,7 @@ export const PaymentGatewayPage: React.FC = () => {
                   Diagnostik &amp; Uji Tes Koneksi API
                 </h3>
                 <p className="text-xs text-secondary mt-0.5">
-                  Verifikasi apakah server POS Dimsum Intan dapat mengotentikasi dan bertukar sinyal handshake dengan provider {selectedProvider}.
+                  Verifikasi apakah server POS Pro POS Enterprise dapat mengotentikasi dan bertukar sinyal handshake dengan provider {selectedProvider}.
                 </p>
               </div>
 
@@ -690,7 +690,7 @@ export const PaymentGatewayPage: React.FC = () => {
             Ringkasan Metode Pembayaran Kasir POS
           </h3>
           <p className="text-xs text-secondary mb-4">
-            Metode pembayaran yang akan muncul pada popup checkout kasir outlet Dimsum Intan.
+            Metode pembayaran yang akan muncul pada popup checkout kasir outlet Pro POS Enterprise.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

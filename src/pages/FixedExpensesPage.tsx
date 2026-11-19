@@ -215,7 +215,7 @@ export const FixedExpensesPage: React.FC = () => {
               Beban Operasional Tetap (Fixed OPEX)
             </h1>
             <p className="text-xs text-white/70 leading-relaxed">
-              Pengelolaan biaya rutin bulanan sewa lapak 3 cabang, payroll gaji karyawan & kasir, tagihan listrik, air, dan internet POS Dimsum Intan.
+              Pengelolaan biaya rutin bulanan sewa lapak 3 cabang, payroll gaji karyawan & kasir, tagihan listrik, air, dan internet POS Pro POS Enterprise.
             </p>
           </div>
 

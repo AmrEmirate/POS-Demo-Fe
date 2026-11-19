@@ -140,7 +140,7 @@ export const Sidebar: React.FC = () => {
     },
   ];
 
-  const brandName = currentTenant?.name || 'Dimsum Intan';
+  const brandName = currentTenant?.name || 'Pro POS Enterprise';
   const brandSlug = currentTenant?.slug ? `${currentTenant.slug}.posmu.cloud` : 'POS & Accounting';
   const brandColor = currentTenant?.themeColor || '#ea580c';
 
@@ -165,12 +165,12 @@ export const Sidebar: React.FC = () => {
           <div className="px-5 pb-4 flex items-center justify-between border-b border-border-subtle/70">
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className="w-10 h-10 rounded-full p-0.5 flex items-center justify-center shadow-sm shrink-0 overflow-hidden border border-brand-gold/50 bg-[#FFCC00]"
+                className="w-10 h-10 rounded-xl p-1 flex items-center justify-center shadow-sm shrink-0 overflow-hidden border border-slate-200 bg-white"
               >
                 <img
-                  src={currentTenant?.logoUrl || '/logo_intan.png'}
+                  src={currentTenant?.logoUrl || '/logo.png'}
                   alt={brandName}
-                  className="w-full h-full object-cover rounded-full"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div className="flex flex-col leading-tight min-w-0">

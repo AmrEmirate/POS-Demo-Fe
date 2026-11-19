@@ -105,7 +105,7 @@ export const DashboardPage: React.FC = () => {
           </div>
           <div className="flex items-baseline gap-2">
             <h1 className="font-serif-title text-2xl lg:text-3xl font-bold text-brand-espresso tracking-tight">
-              Ringkasan Eksekutif Dimsum Intan
+              Ringkasan Eksekutif Pro POS Enterprise
             </h1>
             <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-surface-container text-xs text-secondary font-bold">
               {outlets.length} Outlet Terhubung

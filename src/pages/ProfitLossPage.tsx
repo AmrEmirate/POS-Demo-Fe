@@ -114,7 +114,7 @@ export const ProfitLossPage: React.FC = () => {
     if (format === 'EXCEL') {
       // Generate CSV formatted for Microsoft Excel
       const csvRows = [
-        ['LAPORAN LABA RUGI & ARUS KAS - DIMSUM INTAN'],
+        ['LAPORAN LABA RUGI & ARUS KAS - PRO POS ENTERPRISE'],
         [`Cabang: ${branchName}`, `Tanggal Audit: ${dateStr}`],
         [],
         ['KOMPONEN KEUANGAN', 'NOMINAL (IDR)', 'KETERANGAN'],
@@ -152,7 +152,7 @@ export const ProfitLossPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `Laporan_Laba_Rugi_Dimsum_Intan_${branchName}_${dateStr}.csv`);
+      link.setAttribute('download', `Laporan_Laba_Rugi_Pro_POS_Enterprise_${branchName}_${dateStr}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -167,7 +167,7 @@ export const ProfitLossPage: React.FC = () => {
           <!DOCTYPE html>
           <html>
             <head>
-              <title>Laporan Laba Rugi Dimsum Intan - ${branchName}</title>
+              <title>Laporan Laba Rugi Pro POS Enterprise - ${branchName}</title>
               <style>
                 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1E1715; }
                 .header { border-bottom: 2px solid #8B2500; padding-bottom: 16px; margin-bottom: 24px; }
@@ -184,7 +184,7 @@ export const ProfitLossPage: React.FC = () => {
             </head>
             <body>
               <div class="header">
-                <h1 class="title">DIMSUM INTAN • LAPORAN LABA RUGI & ARUS KAS</h1>
+                <h1 class="title">PRO POS ENTERPRISE • LAPORAN LABA RUGI & ARUS KAS</h1>
                 <div class="subtitle">Cabang: ${branchName} | Tanggal Cetak: ${new Date().toLocaleString('id-ID')} | Otorisasi: Hj. Intan Permata (Owner)</div>
               </div>
               <table>
@@ -245,7 +245,7 @@ export const ProfitLossPage: React.FC = () => {
                 </tbody>
               </table>
               <div class="footer">
-                Dokumen resmi sistem akuntansi Dimsum Intan • Terintegrasi PostgreSQL Cloud
+                Dokumen resmi sistem akuntansi Pro POS Enterprise • Terintegrasi PostgreSQL Cloud
               </div>
             </body>
           </html>
@@ -279,7 +279,7 @@ export const ProfitLossPage: React.FC = () => {
           </h1>
           <p className="text-xs text-secondary">
             {selectedOutletId === 'all'
-              ? `Dimsum Intan Group ${outlets.length > 0 ? `(Konsolidasi ${outlets.length} Cabang Operasional)` : '(Konsolidasi Operasional)'}`
+              ? `Pro POS Enterprise Group ${outlets.length > 0 ? `(Konsolidasi ${outlets.length} Cabang Operasional)` : '(Konsolidasi Operasional)'}`
               : `${activeOutlet?.name || 'Cabang Terpilih'} (${activeOutlet?.code || 'Outlet'})`}
           </p>
         </div>
@@ -308,7 +308,7 @@ export const ProfitLossPage: React.FC = () => {
       {exportNotice && (
         <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-800 text-xs font-semibold flex items-center justify-between">
           <span>
-            Berkas Laporan Laba Rugi Dimsum Intan ({exportNotice}) berhasil diproses untuk {outlets.length} cabang.
+            Berkas Laporan Laba Rugi Pro POS Enterprise ({exportNotice}) berhasil diproses untuk {outlets.length} cabang.
           </span>
           <span className="font-bold underline cursor-pointer">Download File</span>
         </div>

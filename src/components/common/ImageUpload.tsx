@@ -149,7 +149,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             />
           </div>
           <span className="text-[10px] text-secondary">
-            Menyimpan foto resolusi tinggi ke cloud Dimsum Intan
+            Menyimpan foto resolusi tinggi ke cloud Pro POS Enterprise
           </span>
         </div>
       ) : value ? (

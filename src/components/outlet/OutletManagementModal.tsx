@@ -120,7 +120,7 @@ export const OutletManagementModal: React.FC<OutletManagementModalProps> = ({ is
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-espresso/70 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200">
       <div className="w-full max-w-2xl bg-surface-card rounded-3xl border border-border-subtle shadow-2xl overflow-hidden flex flex-col my-8 max-h-[90vh]">
         {/* Modal Header */}
-        <div className="p-6 bg-gradient-to-r from-brand-espresso to-[#3a2824] text-white flex items-center justify-between shrink-0">
+        <div className="p-6 bg-gradient-to-r from-brand-espresso to-[#0A3366] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-brand-gold text-brand-espresso flex items-center justify-center font-bold shadow-md">
               <Store className="w-5 h-5" />
@@ -130,7 +130,7 @@ export const OutletManagementModal: React.FC<OutletManagementModalProps> = ({ is
                 Manajemen Master Cabang
               </h2>
               <p className="text-[11px] text-white/70">
-                Kelola daftar cabang outlet aktif & target omset harian Dimsum Intan
+                Kelola daftar cabang outlet aktif &amp; target omset harian Pro POS Enterprise
               </p>
             </div>
           </div>
@@ -360,7 +360,7 @@ export const OutletManagementModal: React.FC<OutletManagementModalProps> = ({ is
         <div className="p-4 bg-surface-container-low border-t border-border-subtle flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-brand-espresso text-brand-gold text-xs font-bold hover:bg-[#2e211e] transition-all cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-brand-espresso text-brand-gold text-xs font-bold hover:bg-[#0A3366] transition-all cursor-pointer"
           >
             Tutup
           </button>

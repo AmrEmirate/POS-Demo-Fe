@@ -1122,7 +1122,7 @@ export const WalletWithdrawalPage: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: DIMSUM INTAN OFFICIAL"
+                  placeholder="Contoh: PRO POS ENTERPRISE OFFICIAL"
                   value={formBankAccountName}
                   onChange={(e) => setFormBankAccountName(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-card text-xs font-bold uppercase text-brand-espresso border border-border-strong focus:outline-none"

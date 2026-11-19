@@ -270,7 +270,7 @@ export const SubscriptionBillingPage: React.FC = () => {
           const duitkuRes = await createDuitkuSubscriptionCheckout({
             invoiceId: res.data.invoice.id,
             amount: Number(res.data.invoice.amount),
-            planName: res.data.invoice.description || 'Paket Langganan Dimsum Intan',
+            planName: res.data.invoice.description || 'Paket Langganan Pro POS Enterprise',
           });
 
           if (duitkuRes.success) {
@@ -477,7 +477,7 @@ export const SubscriptionBillingPage: React.FC = () => {
             </span>
           </div>
           <p className="text-secondary text-sm mt-1">
-            Kelola paket langganan resmi Cloud POS, sisa kuota transaksi outlet, dan perpanjangan lisensi Dimsum Intan.
+            Kelola paket langganan resmi Cloud POS, sisa kuota transaksi outlet, dan perpanjangan lisensi Pro POS Enterprise.
           </p>
         </div>
 
@@ -780,7 +780,7 @@ export const SubscriptionBillingPage: React.FC = () => {
               Riwayat Faktur &amp; Tagihan Langganan
             </h2>
             <p className="text-xs text-secondary mt-0.5">
-              Daftar seluruh faktur langganan Cloud POS Dimsum Intan dan bukti pembayaran resmi.
+              Daftar seluruh faktur langganan Cloud POS Pro POS Enterprise dan bukti pembayaran resmi.
             </p>
           </div>
           <button
@@ -943,7 +943,7 @@ export const SubscriptionBillingPage: React.FC = () => {
                     {activePaymentInvoice ? 'Pembayaran Tagihan Lisensi' : 'Konfirmasi Transaksi Langganan'}
                   </h3>
                   <p className="text-xs text-secondary">
-                    Cloud POS Dimsum Intan • Gateway QRIS &amp; Virtual Account
+                    Cloud POS Pro POS Enterprise • Gateway QRIS &amp; Virtual Account
                   </p>
                 </div>
               </div>
@@ -978,14 +978,14 @@ export const SubscriptionBillingPage: React.FC = () => {
                   <div className="p-3 bg-white rounded-2xl border border-border-strong shadow-xs flex flex-col items-center max-w-[240px] w-full">
                     <img
                       src="/qris.jpeg"
-                      alt="QRIS Pembayaran Resmi Cloud POS Dimsum Intan"
+                      alt="QRIS Pembayaran Resmi Cloud POS Pro POS Enterprise"
                       className="w-full h-auto rounded-xl object-contain shadow-xs"
                     />
                     <span className="text-[10px] font-mono font-bold text-brand-espresso mt-2">
                       NMID: ID1024889210928
                     </span>
                     <span className="text-[9px] text-secondary">
-                      PT PRO TEKNOLOGI / DIMSUM INTAN
+                      PT PRO TEKNOLOGI / PRO POS ENTERPRISE
                     </span>
                   </div>
                   <p className="text-xs font-bold text-brand-espresso mt-3">

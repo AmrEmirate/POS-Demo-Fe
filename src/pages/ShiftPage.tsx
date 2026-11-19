@@ -355,7 +355,7 @@ export const ShiftPage: React.FC = () => {
 
           <div className="mt-4 pt-3 border-t border-border-subtle text-[11px] text-secondary flex items-center justify-between">
             <span>Kebijakan Shift: Setiap kasir bertanggung jawab atas uang laci</span>
-            <span className="font-bold text-brand-espresso">SOP Dimsum Intan</span>
+            <span className="font-bold text-brand-espresso">SOP Pro POS Enterprise</span>
           </div>
         </div>
       </div>
@@ -802,7 +802,7 @@ export const ShiftPage: React.FC = () => {
             >
               <div className="text-center pb-3 border-b-2 border-black">
                 <h2 className="font-bold text-base tracking-wider text-black">
-                  DIMSUM INTAN
+                  PRO POS ENTERPRISE
                 </h2>
                 <p className="text-xs font-bold mt-0.5">REKAP TUTUP SHIFT KASIR</p>
                 <p className="text-[10px] text-gray-600">(Z-REPORT AUDIT REKONSILIASI)</p>

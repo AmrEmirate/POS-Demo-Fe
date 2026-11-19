@@ -297,7 +297,7 @@ export const BranchesPage: React.FC = () => {
       o.phone,
       o.targetDailySales,
     ]);
-    exportToCsv('Data_Cabang_Dimsum_Intan', headers, rows);
+    exportToCsv('Data_Cabang_Pro_POS_Enterprise', headers, rows);
     showNotification('Data cabang berhasil diekspor ke CSV', 'success');
   };
 
@@ -389,7 +389,7 @@ export const BranchesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Banner / Header */}
-      <div className="bg-gradient-to-r from-brand-espresso via-[#32231F] to-brand-espresso rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-white/10">
+      <div className="bg-gradient-to-r from-brand-espresso via-[#0A3366] to-brand-espresso rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-white/10">
         <div className="absolute -right-16 -top-16 w-64 h-64 bg-brand-gold/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-brand-terracotta/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -403,7 +403,7 @@ export const BranchesPage: React.FC = () => {
               Master Cabang & Target Omset
             </h1>
             <p className="text-xs sm:text-sm text-white/70 max-w-2xl leading-relaxed">
-              Kelola seluruh jaringan cabang fisik Dimsum Intan, tetapkan target penjualan harian per outlet, pantau penugasan kasir, dan pastikan pencatatan akuntansi tersentralisasi secara akurat.
+              Kelola seluruh jaringan cabang fisik Pro POS Enterprise, tetapkan target penjualan harian per outlet, pantau penugasan kasir, dan pastikan pencatatan akuntansi tersentralisasi secara akurat.
             </p>
           </div>
 
@@ -607,7 +607,7 @@ export const BranchesPage: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-xs text-secondary mt-1.5 max-w-3xl leading-relaxed">
-                        Saat ini Dimsum Intan beroperasi dalam mode gerai pusat tunggal / konsolidasi. Untuk memisahkan inventori kasir, sesi shift kasir laci mandiri, laporan laba rugi per lokasi, dan printer dapur klakat per gerai, Anda dapat mengaktifkan <strong className="text-brand-espresso font-bold">Lisensi Multi-Cabang</strong>.
+                        Saat ini Pro POS Enterprise beroperasi dalam mode gerai pusat tunggal / konsolidasi. Untuk memisahkan inventori kasir, sesi shift kasir laci mandiri, laporan laba rugi per lokasi, dan printer dapur klakat per gerai, Anda dapat mengaktifkan <strong className="text-brand-espresso font-bold">Lisensi Multi-Cabang</strong>.
                       </p>
                     </div>
                   </div>
@@ -642,7 +642,7 @@ export const BranchesPage: React.FC = () => {
                         Buka & Tambah Cabang Fisik Baru
                       </h3>
                       <p className="text-xs sm:text-sm text-secondary max-w-xl leading-relaxed">
-                        Tingkatkan skala bisnis Dimsum Intan dari Dipatiukur, Riau, hingga Buah Batu dengan kendali kasir mandiri, akuntansi presisi, dan pencegahan fraud terpusat.
+                        Tingkatkan skala bisnis Pro POS Enterprise dari Dipatiukur, Riau, hingga Buah Batu dengan kendali kasir mandiri, akuntansi presisi, dan pencegahan fraud terpusat.
                       </p>
                     </div>
 
@@ -919,7 +919,7 @@ export const BranchesPage: React.FC = () => {
 
                 <div className="p-5 bg-surface-container/30 text-center border-t border-border-subtle space-y-2">
                   <p className="text-xs text-secondary">
-                    Belum ada outlet fisik tambahan yang didaftarkan pada akun Dimsum Intan Anda.
+                    Belum ada outlet fisik tambahan yang didaftarkan pada akun Pro POS Enterprise Anda.
                   </p>
                   <button
                     type="button"
@@ -946,7 +946,7 @@ export const BranchesPage: React.FC = () => {
                       {/* Top Row: Code Badge & Actions */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-espresso to-[#382622] text-brand-gold font-black text-xs flex items-center justify-center shadow-xs">
+                          <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-espresso to-[#0A3366] text-brand-gold font-black text-xs flex items-center justify-center shadow-xs">
                             {outlet.code}
                           </span>
                           <div>
@@ -1285,7 +1285,7 @@ export const BranchesPage: React.FC = () => {
               Prosedur Standard Operasional (SOP) Pembukaan Cabang Baru
             </h2>
             <p className="text-xs sm:text-sm text-secondary leading-relaxed">
-              Panduan lengkap bagi manajemen Dimsum Intan dalam melakukan ekspansi cabang fisik baru agar pencatatan stok, modal shift kasir, dan akuntansi pajak berjalan tanpa kendala.
+              Panduan lengkap bagi manajemen Pro POS Enterprise dalam melakukan ekspansi cabang fisik baru agar pencatatan stok, modal shift kasir, dan akuntansi pajak berjalan tanpa kendala.
             </p>
           </div>
 
@@ -1494,7 +1494,7 @@ export const BranchesPage: React.FC = () => {
                   type="text"
                   value={outletName}
                   onChange={(e) => setOutletName(e.target.value)}
-                  placeholder="Contoh: Dimsum Intan Dipatiukur"
+                  placeholder="Contoh: Pro POS Enterprise Dipatiukur"
                   className="w-full p-2.5 rounded-xl bg-surface-container border border-border-subtle text-xs font-bold text-brand-espresso focus:outline-none focus:border-brand-gold"
                   required
                 />
